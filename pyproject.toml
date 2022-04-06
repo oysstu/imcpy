@@ -5,4 +5,10 @@ requires = [
     "cmake>=3.8",
 ]
 
+[tool.poetry]
+packages = [
+    { include = "utils" },
+]
+
+
 build-backend = "setuptools.build_meta"
