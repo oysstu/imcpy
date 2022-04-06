@@ -1,6 +1,10 @@
 name: Build
 
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
+  release:
+    types:
+    - published
 
 jobs:
   build_sdist:
@@ -31,6 +35,10 @@ jobs:
             bitness: 64
             platform_id: win_amd64
           - os: windows-latest
+            python: 39
+            bitness: 64
+            platform_id: win_amd64
+          - os: windows-latest
             python: 310
             bitness: 64
             platform_id: win_amd64
@@ -42,12 +50,17 @@ jobs:
             platform_id: manylinux_x86_64
             manylinux_image: manylinux2014
           - os: ubuntu-latest
+            python: 39
+            bitness: 64
+            platform_id: manylinux_x86_64
+            manylinux_image: manylinux2014
+          - os: ubuntu-latest
             python: 310
             bitness: 64
             platform_id: manylinux_x86_64
             manylinux_image: manylinux2014
 
-          # Linux aarch64 manylinux2014
+          # Linux aarch64 manylinux2014 (limited to two versions due to compile time)
           - os: ubuntu-latest
             python: 38
             bitness: 64
@@ -90,3 +103,17 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           path: ./wheelhouse/*.whl
+  upload_all:
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+    - uses: actions/download-artifact@v2
+      with:
+        name: artifact
+        path: dist
+
+    - uses: pypa/gh-action-pypi-publish@v1.5.0
+      with:
+        user: __token__
+        password: ${{ secrets.pypi_password }}
