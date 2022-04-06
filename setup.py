@@ -122,18 +122,22 @@ class CMakeBuild(build_ext):
 
 
 if __name__ == '__main__':
+    with open("README.md", "r", encoding="utf-8") as fh:
+        long_description = fh.read()
+
     setup(
         name='imcpy',
         version='0.4.dev0',
         author='Oystein Sture',
         author_email='oysstu@gmail.com',
         description='Python bindings for DUNE-IMC',
+        long_description=long_description,
+        long_description_content_type='text/markdown',
         url="https://github.com/oysstu/imcpy",
         project_urls={
             "Bug Tracker": "https://github.com/oysstu/imcpy/issues",
         },
         license='MIT',
-        long_description='',
         classifiers=[
             "Programming Language :: Python :: 3",
             "License :: OSI Approved :: MIT License",
