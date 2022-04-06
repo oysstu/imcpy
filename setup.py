@@ -127,7 +127,7 @@ if __name__ == '__main__':
 
     setup(
         name='imcpy',
-        version='0.4.dev0',
+        version='1.0.0',
         author='Oystein Sture',
         author_email='oysstu@gmail.com',
         description='Python bindings for DUNE-IMC',
