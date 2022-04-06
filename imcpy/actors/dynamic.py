@@ -3,15 +3,15 @@ import time
 from operator import itemgetter
 import logging
 
-import pyimc
-from pyimc.actors import IMCBase
-from pyimc.common import multicast_ip
-from pyimc.decorators import Subscribe, Periodic
-from pyimc.exception import AmbiguousKeyError
-from pyimc.network.udp import IMCSenderUDP
-from pyimc.network.utils import get_interfaces
+import imcpy
+from imcpy.actors import IMCBase
+from imcpy.common import multicast_ip
+from imcpy.decorators import Subscribe, Periodic
+from imcpy.exception import AmbiguousKeyError
+from imcpy.network.udp import IMCSenderUDP
+from imcpy.network.utils import get_interfaces
 
-logger = logging.getLogger('pyimc.actors.dynamic')
+logger = logging.getLogger('imcpy.actors.dynamic')
 
 
 class DynamicActor(IMCBase):
@@ -22,10 +22,10 @@ class DynamicActor(IMCBase):
         super().__init__(*args, **kwargs)
 
         # Set initial announce details
-        self.announce = pyimc.Announce()
+        self.announce = imcpy.Announce()
         self.announce.src = self.imc_id  # imcjava uses 0x3333
-        self.announce.sys_name = 'ccu-pyimc-{}'.format(socket.gethostname().lower())
-        self.announce.sys_type = pyimc.SystemType.CCU
+        self.announce.sys_name = 'ccu-imcpy-{}'.format(socket.gethostname().lower())
+        self.announce.sys_type = imcpy.SystemType.CCU
         self.announce.owner = 0xFFFF
         self.announce.src_ent = 1
 
@@ -35,19 +35,19 @@ class DynamicActor(IMCBase):
         # IMC nodes to send heartbeat signal to (maintaining comms)
         self.heartbeat = []  # type: List[Union[str, int, Tuple[int, str]]]
 
-    @Subscribe(pyimc.EntityList)
+    @Subscribe(imcpy.EntityList)
     def _reply_entity_list(self, msg):
         """
         Respond to entity list queries
         """
-        OpEnum = pyimc.EntityList.OperationEnum
+        OpEnum = imcpy.EntityList.OperationEnum
         if msg.op == OpEnum.QUERY:
             try:
                 node = self.resolve_node_id(msg)
 
                 # Format entities into string and send back to node that requested it
                 ent_lst_sorted = sorted(self.entities.items(), key=itemgetter(1))  # Sort by value (entity id)
-                ent_lst = pyimc.EntityList()
+                ent_lst = imcpy.EntityList()
                 ent_lst.op = OpEnum.REPORT
                 ent_lst.list = ';'.join('{}={}'.format(k, v) for k, v in ent_lst_sorted)
                 self.send(node, ent_lst)
@@ -61,8 +61,8 @@ class DynamicActor(IMCBase):
         """
         for k, node in self._nodes.items():
             if not node.entities:
-                q_ent = pyimc.EntityList()
-                q_ent.op = pyimc.EntityList.OperationEnum.QUERY
+                q_ent = imcpy.EntityList()
+                q_ent.op = imcpy.EntityList.OperationEnum.QUERY
                 self.send(node, q_ent)
 
     @Periodic(10)
@@ -92,7 +92,7 @@ class DynamicActor(IMCBase):
         """
         Send a heartbeat signal to nodes specified in self.heartbeat
         """
-        hb = pyimc.Heartbeat()
+        hb = imcpy.Heartbeat()
         hb_sent = []
         for node_id in self.heartbeat:
             try:

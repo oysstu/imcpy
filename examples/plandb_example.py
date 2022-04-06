@@ -5,9 +5,9 @@ This example illustrates how to send a request for the plan database from a syst
 import logging
 import sys
 
-import pyimc
-from pyimc.actors.dynamic import DynamicActor
-from pyimc.decorators import Periodic, Subscribe
+import imcpy
+from imcpy.actors.dynamic import DynamicActor
+from imcpy.decorators import Periodic, Subscribe
 
 
 class PlanActor(DynamicActor):
@@ -38,11 +38,11 @@ class PlanActor(DynamicActor):
 
             # Request the PlanDB state
             logging.debug("Requesting PlanDB state from target.")
-            db_req = pyimc.PlanDB()
+            db_req = imcpy.PlanDB()
 
             # Enumerations are exposed as a subclass of the message
-            db_req.type = pyimc.PlanDB.TypeEnum.REQUEST
-            db_req.op = pyimc.PlanDB.OperationEnum.GET_STATE  # Note: DSTATE does not seem to work as intended
+            db_req.type = imcpy.PlanDB.TypeEnum.REQUEST
+            db_req.op = imcpy.PlanDB.OperationEnum.GET_STATE  # Note: DSTATE does not seem to work as intended
             db_req.request_id = self.db_reqid
             self.db_reqid += 1
 
@@ -54,15 +54,15 @@ class PlanActor(DynamicActor):
             logging.debug('Target system is not connected.')
 
 
-    @Subscribe(pyimc.PlanDB)
-    def recv_plandb(self, msg: pyimc.PlanDB):
+    @Subscribe(imcpy.PlanDB)
+    def recv_plandb(self, msg: imcpy.PlanDB):
         try:
             # Check if message originates from the target system
             node = self.resolve_node_id(self.target)
             if msg.src == node.id:
                 # Check for a successful PlanDB request of the correct type
-                if msg.type == pyimc.PlanDB.TypeEnum.SUCCESS and msg.op == pyimc.PlanDB.OperationEnum.GET_STATE:
-                    dbstate = msg.arg  # type: pyimc.PlanDBState
+                if msg.type == imcpy.PlanDB.TypeEnum.SUCCESS and msg.op == imcpy.PlanDB.OperationEnum.GET_STATE:
+                    dbstate = msg.arg  # type: imcpy.PlanDBState
 
                     # The IMC MessageList type interface is designed to be as close to a python list as possible
                     # It has support for iteration, indexing, slicing, append, extend, len, in

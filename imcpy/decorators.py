@@ -12,7 +12,7 @@ from typing import Dict, List, Tuple, Type, Union
 
 class IMCDecoratorBase:
     """
-    Base class for pyimc decorators
+    Base class for imcpy decorators
     """
     def add_event(self, loop, instance, fn):
         """
@@ -67,11 +67,11 @@ class Periodic(IMCDecoratorBase):
 class Subscribe(IMCDecoratorBase):
     """
     Subscribes to the specified IMC Messages.
-    Multiple types can be specified (e.g @Subscribe(pyimc.CpuUsage, pyimc.Heartbeat)
+    Multiple types can be specified (e.g @Subscribe(imcpy.CpuUsage, imcpy.Heartbeat)
     """
     def __init__(self, *args, **kwargs):
         for arg in args:
-            if arg.__module__ == '_pyimc':
+            if arg.__module__ == '_imcpy':
                 # Add to __imcsub__
                 try:
                     self.subs.append(arg)

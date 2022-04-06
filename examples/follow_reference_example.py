@@ -1,8 +1,8 @@
 import logging, math, sys
 
-import pyimc
-from pyimc.actors import DynamicActor
-from pyimc.decorators import Subscribe, Periodic
+import imcpy
+from imcpy.actors import DynamicActor
+from imcpy.decorators import Subscribe, Periodic
 
 logger = logging.getLogger('examples.FollowRef')
 
@@ -25,29 +25,29 @@ class FollowRef(DynamicActor):
         """
         try:
             next_coord = self.wp[self.wp_next % len(self.wp)]
-            lat, lon = pyimc.coordinates.WGS84.displace(self.lat, self.lon, n=next_coord[0], e=next_coord[1])
+            lat, lon = imcpy.coordinates.WGS84.displace(self.lat, self.lon, n=next_coord[0], e=next_coord[1])
             self.wp_next += 1
 
             node = self.resolve_node_id(node_id)
-            r = pyimc.Reference()
+            r = imcpy.Reference()
             r.lat = lat  # Target waypoint
             r.lon = lon  # Target waypoint
 
             # Assign z
-            dz = pyimc.DesiredZ()
+            dz = imcpy.DesiredZ()
             dz.value = 0.0
-            dz.z_units = pyimc.ZUnits.DEPTH
+            dz.z_units = imcpy.ZUnits.DEPTH
             r.z = dz
 
             # Assign the speed
-            ds = pyimc.DesiredSpeed()
+            ds = imcpy.DesiredSpeed()
             ds.value = 1.6
-            ds.speed_units = pyimc.SpeedUnits.METERS_PS
+            ds.speed_units = imcpy.SpeedUnits.METERS_PS
             r.speed = ds
 
             # Bitwise flags (see IMC spec for explanation)
-            flags = pyimc.Reference.FlagsBits.LOCATION | pyimc.Reference.FlagsBits.SPEED | pyimc.Reference.FlagsBits.Z
-            flags = flags | pyimc.Reference.FlagsBits.MANDONE if final else flags
+            flags = imcpy.Reference.FlagsBits.LOCATION | imcpy.Reference.FlagsBits.SPEED | imcpy.Reference.FlagsBits.Z
+            flags = flags | imcpy.Reference.FlagsBits.MANDONE if final else flags
             r.flags = flags
             logger.info('Sending reference')
             self.last_ref = r
@@ -74,7 +74,7 @@ class FollowRef(DynamicActor):
             # Check if target system is connected
             try:
                 node = self.resolve_node_id(self.target)
-                fr = pyimc.FollowReference()
+                fr = imcpy.FollowReference()
                 fr.control_src = 0xFFFF  # Controllable from all IMC adresses
                 fr.control_ent = 0xFF  # Controllable from all entities
                 fr.timeout = 10.0  # Maneuver stops when time since last Reference message exceeds this value
@@ -82,21 +82,21 @@ class FollowRef(DynamicActor):
                 fr.altitude_interval = 0
 
                 # Add to PlanManeuver message
-                pman = pyimc.PlanManeuver()
+                pman = imcpy.PlanManeuver()
                 pman.data = fr
                 pman.maneuver_id = 'FollowReferenceManeuver'
 
                 # Add to PlanSpecification
-                spec = pyimc.PlanSpecification()
+                spec = imcpy.PlanSpecification()
                 spec.plan_id = 'FollowReference'
                 spec.maneuvers.append(pman)
                 spec.start_man_id = 'FollowReferenceManeuver'
-                spec.description = 'A test plan sent from pyimc'
+                spec.description = 'A test plan sent from imcpy'
 
                 # Start plan
-                pc = pyimc.PlanControl()
-                pc.type = pyimc.PlanControl.TypeEnum.REQUEST
-                pc.op = pyimc.PlanControl.OperationEnum.START
+                pc = imcpy.PlanControl()
+                pc.type = imcpy.PlanControl.TypeEnum.REQUEST
+                pc.op = imcpy.PlanControl.OperationEnum.START
                 pc.plan_id = 'FollowReference'
                 pc.arg = spec
 
@@ -106,34 +106,34 @@ class FollowRef(DynamicActor):
             except KeyError:
                 pass
 
-    @Subscribe(pyimc.EstimatedState)
+    @Subscribe(imcpy.EstimatedState)
     def recv_estate(self, msg):
         if self.is_from_target(msg):
-            self.lat, self.lon, _ = pyimc.coordinates.toWGS84(msg)
+            self.lat, self.lon, _ = imcpy.coordinates.toWGS84(msg)
 
-    @Subscribe(pyimc.FollowRefState)
-    def recv_followrefstate(self, msg: pyimc.FollowRefState):
+    @Subscribe(imcpy.FollowRefState)
+    def recv_followrefstate(self, msg: imcpy.FollowRefState):
         if not self.is_from_target(msg):
             return
 
         logger.info('Received FollowRefState')
         self.state = msg.state
 
-        if msg.state == pyimc.FollowRefState.StateEnum.GOTO:
+        if msg.state == imcpy.FollowRefState.StateEnum.GOTO:
             # In goto maneuver
             logger.info('Goto')
-            if msg.proximity & pyimc.FollowRefState.ProximityBits.XY_NEAR:
+            if msg.proximity & imcpy.FollowRefState.ProximityBits.XY_NEAR:
                 # Near XY - send next reference
                 logger.info('-- Near XY')
                 self.send_reference(node_id=self.target)
-        elif msg.state in (pyimc.FollowRefState.StateEnum.LOITER, pyimc.FollowRefState.StateEnum.HOVER, pyimc.FollowRefState.StateEnum.WAIT):
+        elif msg.state in (imcpy.FollowRefState.StateEnum.LOITER, imcpy.FollowRefState.StateEnum.HOVER, imcpy.FollowRefState.StateEnum.WAIT):
             # Loitering/hovering/waiting - send next reference
             logger.info('Waiting')
             self.send_reference(node_id=self.target)
-        elif msg.state == pyimc.FollowRefState.StateEnum.ELEVATOR:
+        elif msg.state == imcpy.FollowRefState.StateEnum.ELEVATOR:
             # Moving in z-direction after reaching reference cylinder
             logger.info('Elevator')
-        elif msg.state == pyimc.FollowRefState.StateEnum.TIMEOUT:
+        elif msg.state == imcpy.FollowRefState.StateEnum.TIMEOUT:
             # Controlling system timed out
             logger.info('Timeout')
 

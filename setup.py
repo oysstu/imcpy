@@ -70,7 +70,7 @@ class CMakeBuild(build_ext):
             shutil.rmtree(imc_build)
         shutil.copytree(imc_dir, imc_build)
 
-        # Generate pyimc bindings
+        # Generate imcpy bindings
         whitelist = []
         if os.path.isfile('whitelist.cfg'):
             with open('whitelist.cfg', 'rt') as f:
@@ -114,7 +114,7 @@ class CMakeBuild(build_ext):
         subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
         # Copy pyi file to out dir
-        shutil.move('_pyimc.pyi', os.path.join(extdir, '_pyimc.pyi'))
+        shutil.move('_imcpy.pyi', os.path.join(extdir, '_imcpy.pyi'))
 
         # Build was successful, write imc md5
         with open(md5_path, 'wt') as f:
@@ -124,26 +124,26 @@ class CMakeBuild(build_ext):
 
 if __name__ == '__main__':
     setup(
-        name='pyimc',
+        name='imcpy',
         version='0.4.dev0',
         author='Oystein Sture',
         author_email='oysstu@gmail.com',
         description='Python bindings for DUNE-IMC',
         license='MIT',
         long_description='',
-        packages=['pyimc', 
-                  'pyimc.actors', 
-                  'pyimc.algorithms', 
-                  'pyimc.coordinates', 
-                  'pyimc.network'],
+        packages=['imcpy', 
+                  'imcpy.actors', 
+                  'imcpy.algorithms', 
+                  'imcpy.coordinates', 
+                  'imcpy.network'],
         python_requires='>=3.6',
         install_requires=['netifaces'],
         extras_require={'LSFExporter': ['pandas']},
-        package_data={'': ['_pyimc.pyi'],
-                      'pyimc.coordinates': ['*.pyi'],
-                      'pyimc.algorithms': ['*.pyi']},
+        package_data={'': ['_imcpy.pyi'],
+                      'imcpy.coordinates': ['*.pyi'],
+                      'imcpy.algorithms': ['*.pyi']},
         include_package_data=True,
-        ext_modules=[CMakeExtension('_pyimc')],
+        ext_modules=[CMakeExtension('_imcpy')],
         cmdclass=dict(build_ext=CMakeBuild),
         zip_safe=False
     )

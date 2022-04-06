@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
-SET(PROJ_NAME _pyimc)
+SET(PROJ_NAME _imcpy)
 project(${PROJ_NAME})
 
 # Set CXX standard to 17
@@ -40,7 +40,7 @@ add_dependencies(dune-core imc)
 FILE(GLOB_RECURSE CPP_SRC src pb*.cpp)
 
 # Use THIN_LTO if available (Clang/LLVM)
-pybind11_add_module(${PROJ_NAME} MODULE THIN_LTO src/pyimc.cpp ${CPP_SRC})
+pybind11_add_module(${PROJ_NAME} MODULE THIN_LTO src/imcpy.cpp ${CPP_SRC})
 
 # Link with dune-core
 if(MSVC)

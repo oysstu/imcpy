@@ -8,9 +8,9 @@ import sys
 from typing import Tuple
 import asyncio
 
-import pyimc
-from pyimc.actors.dynamic import DynamicActor
-from pyimc.decorators import Subscribe, RunOnce
+import imcpy
+from imcpy.actors.dynamic import DynamicActor
+from imcpy.decorators import Subscribe, RunOnce
 
 logger = logging.getLogger('examples.KeyboardActor')
 
@@ -35,8 +35,8 @@ class KeyboardActor(DynamicActor):
         except KeyError:
             return False
 
-    @Subscribe(pyimc.EstimatedState)
-    def recv_estate(self, msg: pyimc.EstimatedState):
+    @Subscribe(imcpy.EstimatedState)
+    def recv_estate(self, msg: imcpy.EstimatedState):
         if self.from_target(msg):
             if self.estate is None:
                 logger.info('Target connected')
@@ -51,7 +51,7 @@ class KeyboardActor(DynamicActor):
             # Stop vehicle
             try:
                 logger.info('Aborting...')
-                abort = pyimc.Abort()
+                abort = imcpy.Abort()
                 self.send(self.target_name, abort)
             except KeyError:
                 logger.error('Failed to send abort')
@@ -62,32 +62,32 @@ class KeyboardActor(DynamicActor):
             else:
                 logger.info('Starting...')
                 # Compute vehicle lat/lon
-                lat, lon, hae = pyimc.coordinates.toWGS84(self.estate)
+                lat, lon, hae = imcpy.coordinates.toWGS84(self.estate)
 
                 # Define maneuver
-                man = pyimc.Goto()
+                man = imcpy.Goto()
                 man.z = 0.0
-                man.z_units = pyimc.ZUnits.DEPTH
-                man.lat, man.lon = pyimc.coordinates.WGS84.displace(lat, lon, n=100.0, e=0.0)
+                man.z_units = imcpy.ZUnits.DEPTH
+                man.lat, man.lon = imcpy.coordinates.WGS84.displace(lat, lon, n=100.0, e=0.0)
                 man.speed = 1.2
-                man.speed_units = pyimc.SpeedUnits.METERS_PS
+                man.speed_units = imcpy.SpeedUnits.METERS_PS
 
                 # Add to PlanManeuver message
-                pman = pyimc.PlanManeuver()
+                pman = imcpy.PlanManeuver()
                 pman.data = man
                 pman.maneuver_id = 'TestManeuver'
 
                 # Add to PlanSpecification
-                spec = pyimc.PlanSpecification()
+                spec = imcpy.PlanSpecification()
                 spec.plan_id = 'TestPlan'
                 spec.maneuvers.append(pman)
                 spec.start_man_id = 'TestManeuver'
-                spec.description = 'A test plan sent from pyimc'
+                spec.description = 'A test plan sent from imcpy'
 
                 # Start plan
-                pc = pyimc.PlanControl()
-                pc.type = pyimc.PlanControl.TypeEnum.REQUEST
-                pc.op = pyimc.PlanControl.OperationEnum.START
+                pc = imcpy.PlanControl()
+                pc.type = imcpy.PlanControl.TypeEnum.REQUEST
+                pc.op = imcpy.PlanControl.OperationEnum.START
                 pc.plan_id = 'TestManeuver'
                 pc.arg = spec
 

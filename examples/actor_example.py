@@ -11,9 +11,9 @@ import logging
 import sys
 from typing import Tuple
 
-import pyimc
-from pyimc.actors.dynamic import DynamicActor
-from pyimc.decorators import Periodic, Subscribe
+import imcpy
+from imcpy.actors.dynamic import DynamicActor
+from imcpy.decorators import Periodic, Subscribe
 
 
 class ExampleActor(DynamicActor):
@@ -30,8 +30,8 @@ class ExampleActor(DynamicActor):
         self.heartbeat.append(target_name)
 
 
-    @Subscribe(pyimc.EstimatedState)
-    def recv_estate(self, msg: pyimc.EstimatedState):
+    @Subscribe(imcpy.EstimatedState)
+    def recv_estate(self, msg: imcpy.EstimatedState):
         """
         This function is called whenever EstimatedState messages are received
         :param msg: Functions decorated with @Subscribe must always have one parameter for the message
@@ -40,11 +40,11 @@ class ExampleActor(DynamicActor):
 
         # EstimatedState consists of a reference position (LLH) and a local offset.
         # Convert to a single lat/lon coordinate
-        (lat, lon, hae) = pyimc.coordinates.toWGS84(msg)
+        (lat, lon, hae) = imcpy.coordinates.toWGS84(msg)
 
         if self.last_pos:
             # Compute the distance between the current and previous EstimatedState
-            dist = pyimc.coordinates.WGS84.distance(*self.last_pos, lat, lon, hae)
+            dist = imcpy.coordinates.WGS84.distance(*self.last_pos, lat, lon, hae)
             logging.info('The target system moved {} meters since last EstimatedState message.'.format(dist))
 
         self.last_pos = (lat, lon, hae)

@@ -1,11 +1,11 @@
-# pyimc
+# imcpy
 Python bindings for [Inter-Module Communication Protocol (IMC)](https://lsts.fe.up.pt/toolchain/imc) used to communicate between modules in the [LSTS toolchain](https://lsts.fe.up.pt/).
 
 ### Installation
 
 #### Clone this project using
 ```bash
-git clone --recursive git://github.com/oysstu/pyimc.git
+git clone --recursive git://github.com/oysstu/imcpy.git
 ```
 This includes the pybind11 submodule.
 
@@ -33,4 +33,4 @@ Look at minimal_whitelist.cfg for a set of messages that should always be includ
 
 
 #### Recommendations
-- The pyimc library generates stub files for the bindings, meaning that you can have autocomplete and static type checking if your IDE supports them. This can for example be [PyCharm](https://www.jetbrains.com/pycharm/) or [Jedi](https://github.com/davidhalter/jedi)-based editors.
+- The imcpy library generates stub files for the bindings, meaning that you can have autocomplete and static type checking if your IDE supports them. This can for example be [PyCharm](https://www.jetbrains.com/pycharm/) or [Jedi](https://github.com/davidhalter/jedi)-based editors.

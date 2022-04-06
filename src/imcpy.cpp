@@ -12,7 +12,7 @@ void pbConstants(py::module &);
 void pbAlgorithms(py::module &);
 void pbCoordinates(py::module &);
 
-PYBIND11_MODULE(_pyimc, m) {
+PYBIND11_MODULE(_imcpy, m) {
     m.doc() = "IMC bindings for python";
 
     // Bind classes

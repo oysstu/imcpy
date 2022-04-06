@@ -1,7 +1,7 @@
-import pyimc
+import imcpy
 from typing import Tuple
 
-def toWGS84(estate: pyimc.EstimatedState) -> Tuple[float, float, float]:
+def toWGS84(estate: imcpy.EstimatedState) -> Tuple[float, float, float]:
     """
     Convert the position in an estimated state message to WGS84 coordinates (lat, lon, height above ellipsoid).
     :param estate: Estimated state IMC message

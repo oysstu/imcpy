@@ -1,8 +1,8 @@
 import socket, struct, asyncio, logging
-import pyimc
-from pyimc.common import multicast_ip
+import imcpy
+from imcpy.common import multicast_ip
 
-logger = logging.getLogger('pyimc.udp')
+logger = logging.getLogger('imcpy.udp')
 
 
 class IMCSenderUDP:
@@ -25,8 +25,8 @@ class IMCSenderUDP:
         self.sock.close()
 
     def send(self, message, port, log_fh=None):
-        if message.__module__ == '_pyimc':
-            b = pyimc.Packet.serialize(message)
+        if message.__module__ == '_imcpy':
+            b = imcpy.Packet.serialize(message)
             self.sock.sendto(b, (self.dst, port))
 
             if log_fh and not log_fh.closed:
@@ -68,7 +68,7 @@ class IMCProtocolUDP(asyncio.DatagramProtocol):
 
     def datagram_received(self, data, addr):
         try:
-            p = pyimc.Packet.deserialize(data)
+            p = imcpy.Packet.deserialize(data)
 
             if p is not None:
                 # Log IMC message to file if enabled

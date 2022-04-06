@@ -7,7 +7,7 @@ from io import BytesIO
 import os
 import logging
 import ctypes
-import pyimc
+import imcpy
 import pickle
 import heapq
 import gzip
@@ -21,7 +21,7 @@ except ModuleNotFoundError:
     pass
 
 
-logger = logging.getLogger('pyimc.lsf')
+logger = logging.getLogger('imcpy.lsf')
 
 
 # Re-definition of IMC Header and Footer
@@ -57,13 +57,13 @@ class LSFReader:
     Must either be used through the one-off static method or using 'with LSFReader(..) as x:'
     """
     @staticmethod
-    def read(lsf: Union[str, bytes], types: List[Type[pyimc.Message]] = None, use_index=True, save_index=True):
+    def read(lsf: Union[str, bytes], types: List[Type[imcpy.Message]] = None, use_index=True, save_index=True):
         """
         Read all messages of the specified type(s)
         :param lsf: The path to an LSF-file on the filesystem, or an in-memory lsf-file (bytes)
         :param types: List of types to return
         :param use_index: If true, generates an index of the message types (speeds up subsequent reads)
-        :param save_index: If true, the generated index is saved to a pyimc_idx file
+        :param save_index: If true, the generated index is saved to a imcpy_idx file
         :return: Message generator object
         """
         with LSFReader(lsf, use_index=use_index, save_index=save_index) as lsf_reader:
@@ -74,9 +74,9 @@ class LSFReader:
         """
         Reads an LSF file.
         :param lsf: The path to an LSF-file on the filesystem, or an in-memory lsf-file (bytes)
-        :param types: The message types to return. List of pyimc message classes.
+        :param types: The message types to return. List of imcpy message classes.
         :param use_index: If true, generates an index of the message types (speeds up subsequent reads)
-        :param save_index: If true, the generated index is saved to a pyimc_idx file
+        :param save_index: If true, the generated index is saved to a imcpy_idx file
         """
         self.lsf = lsf
         self.f = None  # type: io.BufferedIOBase
@@ -99,14 +99,14 @@ class LSFReader:
         # Attempt to read an pre-existing index file
         if type(self.lsf) is str:
             fbase, ext = os.path.splitext(self.lsf)
-            if os.path.isfile(fbase + '.pyimc_idx') and os.path.getsize(fbase + '.pyimc_idx') > 0:
-                self.read_index(fbase + '.pyimc_idx')
+            if os.path.isfile(fbase + '.imcpy_idx') and os.path.getsize(fbase + '.imcpy_idx') > 0:
+                self.read_index(fbase + '.imcpy_idx')
 
         # Generate/save index
         if not self.idx and self.use_index:
             self.generate_index()
             if self.save_index and type(self.lsf) is str:
-                self.write_index(os.path.splitext(self.lsf)[0] + '.pyimc_idx')
+                self.write_index(os.path.splitext(self.lsf)[0] + '.imcpy_idx')
 
         return self
 
@@ -152,8 +152,8 @@ class LSFReader:
 
     def write_index(self, fpath):
         """
-        Write message index to pyimc_idx file. Generates index if not already present
-        :param fpath: The file path to write (typically lsf_name.pyimc_idx)
+        Write message index to imcpy_idx file. Generates index if not already present
+        :param fpath: The file path to write (typically lsf_name.imcpy_idx)
         :return:
         """
         if not self.idx:
@@ -166,7 +166,7 @@ class LSFReader:
     def read_index(self, fpath):
         """
 
-        :param fpath: The path to write (typically lsf_name.pyimc_idx)
+        :param fpath: The path to write (typically lsf_name.imcpy_idx)
         :return:
         """
         with open(fpath, 'rb') as f_idx:
@@ -180,7 +180,7 @@ class LSFReader:
         # Remove timestamp entry
         del self.idx['timestamp']
 
-    def count_index(self, msg_type: Type[pyimc.Message]) -> int:
+    def count_index(self, msg_type: Type[imcpy.Message]) -> int:
         """
         Get the number of messages for a given type, useful for preallocation.
         Note: generates an index, but only saves if make_index is true
@@ -188,11 +188,11 @@ class LSFReader:
         :return: The number of messages of a given type
         """
 
-        return len(self.idx[pyimc.Factory.id_from_abbrev(msg_type.__name__)])
+        return len(self.idx[imcpy.Factory.id_from_abbrev(msg_type.__name__)])
 
     def count_messages(self):
         """ Returns a dictionary of all message types with their counts """
-        return {type(pyimc.Factory.produce(k)): len(v) for k, v in self.idx.items() if type(k) is int}
+        return {type(imcpy.Factory.produce(k)): len(v) for k, v in self.idx.items() if type(k) is int}
 
     def sorted_idx_iter(self, types: List[int]) -> Iterable[int]:
         """
@@ -208,7 +208,7 @@ class LSFReader:
         # Use the heapq.merge function to return sorted iterator of file indices
         return heapq.merge(*idx_iters)
 
-    def read_message(self, types: List[Type[pyimc.Message]] = None):
+    def read_message(self, types: List[Type[imcpy.Message]] = None):
         """
         Returns a generator that yields the messages in the currently open LSF file.
         This requires the LSFReader object to be opened using the "with" statement.
@@ -216,17 +216,17 @@ class LSFReader:
         :return:
         """
 
-        msg_types = None if types is None else [pyimc.Factory.id_from_abbrev(x.__name__) for x in types]
+        msg_types = None if types is None else [imcpy.Factory.id_from_abbrev(x.__name__) for x in types]
         if self.idx and msg_types is not None:
             # Read using index
             for pos in self.sorted_idx_iter(msg_types):
                 self.f.seek(pos)
                 self.peek_header()
-                if self.header.sync != pyimc.constants.SYNC:
+                if self.header.sync != imcpy.constants.SYNC:
                     warnings.warn('Invalid synchronization number. Stopping parsing')
                     break
                 b = self.f.read(self.header.size + ctypes.sizeof(IMCHeader) + ctypes.sizeof(IMCFooter))
-                msg = pyimc.Packet.deserialize(b)
+                msg = imcpy.Packet.deserialize(b)
                 yield msg
         else:
             # Reset file pointer to start of file
@@ -238,13 +238,13 @@ class LSFReader:
                 self.f.seek(-ctypes.sizeof(IMCHeader), io.SEEK_CUR)
                 self.peek_header()
 
-                if self.header.sync != pyimc.constants.SYNC:
+                if self.header.sync != imcpy.constants.SYNC:
                     warnings.warn('Invalid synchronization number. Stopping parsing')
                     break
 
                 if msg_types is None or self.header.mgid in msg_types:
                     b = self.f.read(self.header.size + ctypes.sizeof(IMCHeader) + ctypes.sizeof(IMCFooter))
-                    msg = pyimc.Packet.deserialize(b)
+                    msg = imcpy.Packet.deserialize(b)
                     yield msg
                 else:
                     self.f.seek(ctypes.sizeof(IMCHeader) + self.header.size + ctypes.sizeof(IMCFooter), io.SEEK_CUR)
@@ -323,23 +323,23 @@ class LSFExporter:
         """
         with self.lsf_reader as lsf:
             try:
-                logging_control = next(lsf.read_message(types=[pyimc.LoggingControl]))
+                logging_control = next(lsf.read_message(types=[imcpy.LoggingControl]))
                 self.log_name = logging_control.name
                 self.logging_system_id = logging_control.src
             except StopIteration:
                 pass
 
             # Collect all announced systems (map: imc id -> system name)
-            for msg in lsf.read_message(types=[pyimc.Announce]):
+            for msg in lsf.read_message(types=[imcpy.Announce]):
                 self.node_map[msg.src] = msg.sys_name
 
             # Collect all entities (imc id, entity id -> entity name)
-            for msg in lsf.read_message(types=[pyimc.EntityInfo]):
+            for msg in lsf.read_message(types=[imcpy.EntityInfo]):
                 self.entity_map[(msg.src, msg.src_ent)] = msg.label
 
             # Do the same using EntityList
-            for msg in lsf.read_message(types=[pyimc.EntityList]):
-                if type(msg) is pyimc.EntityList and msg.op == pyimc.EntityList.OperationEnum.REPORT:
+            for msg in lsf.read_message(types=[imcpy.EntityList]):
+                if type(msg) is imcpy.EntityList and msg.op == imcpy.EntityList.OperationEnum.REPORT:
                     for entity in msg.list.split(';'):
                         entity_name, entity_id = entity.split('=')
                         self.entity_map[(msg.src, int(entity_id))] = entity_name
@@ -375,7 +375,7 @@ class LSFExporter:
                 if hasattr(value, '__members__'):
                     # Cast enumeration to int
                     d.append(int(value))
-                elif pyimc.Message in inspect.getmro(type(value)):
+                elif imcpy.Message in inspect.getmro(type(value)):
                     # Inline message, handle the same way as lists
                     if skip_lists:
                         d.append('InlineMessage<' + type(value).__qualname__ + '>')
@@ -389,10 +389,10 @@ class LSFExporter:
 
         return d
 
-    def export_messages(self, imc_type: Type[pyimc.Message], skip_lists=False, skip_binary=False, condition=None) -> pd.DataFrame:
+    def export_messages(self, imc_type: Type[imcpy.Message], skip_lists=False, skip_binary=False, condition=None) -> pd.DataFrame:
         """
         Export the messages of the target imc type from the LSF file as a pandas.DataFrame
-        :param imc_type: The pyimc type of the target message (e.g. pyimc.EstimatedState)
+        :param imc_type: The imcpy type of the target message (e.g. imcpy.EstimatedState)
         :param skip_lists: Skips MessageList types (works poorly with a tabular structure)
         :param skip_binary: Skip fields with binary content (e.g. sidescan-data)
         :param condition: Only export messages where the given lambda expression evaluates to True (lambda(msg))
@@ -413,8 +413,8 @@ class LSFExporter:
 
                 msg_data.extend(self.extract_fields(msg, msg_fields, skip_lists, skip_binary))
 
-                if imc_type is pyimc.EstimatedState:
-                    extra.append(pyimc.coordinates.toWGS84(msg))
+                if imc_type is imcpy.EstimatedState:
+                    extra.append(imcpy.coordinates.toWGS84(msg))
 
                 data.append(msg_data)
 
@@ -422,7 +422,7 @@ class LSFExporter:
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
 
             # Convert estate local frame to lat/lon
-            if imc_type is pyimc.EstimatedState:
+            if imc_type is imcpy.EstimatedState:
                 df[['lat', 'lon', 'height']] = extra
                 del df['x'], df['y'], df['z']
 
@@ -485,7 +485,7 @@ def merge(lsf_dir, lsf_out):
 
     with open(lsf_out, 'wb') as f:
         for msg in msgs:
-            f.write(pyimc.Packet.serialize(msg))
+            f.write(imcpy.Packet.serialize(msg))
 
 
 def dump_messages(lsf_path, out_path, fmt: Union[str, List[str]], skip_lists=True, skip_binary=False):

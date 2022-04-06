@@ -1,4 +1,4 @@
-import pyimc
+import imcpy
 from typing import Tuple
 
 class CRC8:

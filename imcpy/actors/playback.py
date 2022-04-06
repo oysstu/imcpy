@@ -3,12 +3,12 @@ import asyncio
 import logging
 import sys
 
-import pyimc
-from pyimc.actors.dynamic import DynamicActor
-from pyimc.lsf import LSFReader
-from pyimc.decorators import RunOnce, Subscribe
+import imcpy
+from imcpy.actors.dynamic import DynamicActor
+from imcpy.lsf import LSFReader
+from imcpy.decorators import RunOnce, Subscribe
 
-logger = logging.getLogger('pyimc.actors.playback')
+logger = logging.getLogger('imcpy.actors.playback')
 
 
 class PlaybackActor(DynamicActor):
@@ -41,8 +41,8 @@ class PlaybackActor(DynamicActor):
 
         # Retrieve message subscription types (to skip unwanted messages)
         # LoggingControl is appended, as that is the first message (and therefore contains timestamp of local system)
-        all_messages = not all([pyimc.Message in msgtype.__bases__ for msgtype in self._subs.keys()])
-        msg_types = None if all_messages else list(self._subs.keys()) + [pyimc.LoggingControl]
+        all_messages = not all([imcpy.Message in msgtype.__bases__ for msgtype in self._subs.keys()])
+        msg_types = None if all_messages else list(self._subs.keys()) + [imcpy.LoggingControl]
 
         for msg in LSFReader.read(self.lsf_path, types=msg_types):
             try:
@@ -58,11 +58,11 @@ class PlaybackActor(DynamicActor):
 
             # Optional: Skip messages until given time, except core messages
             if self.start_time and msg.timestamp < self.start_time:
-                if type(msg) is pyimc.Announce:
+                if type(msg) is imcpy.Announce:
                     self._recv_announce(msg)
-                elif type(msg) is pyimc.EntityList:
+                elif type(msg) is imcpy.EntityList:
                     self._recv_entity_list(msg)
-                elif type(msg) is pyimc.EntityInfo:
+                elif type(msg) is imcpy.EntityInfo:
                     self._recv_entity_info(msg)
 
                 continue

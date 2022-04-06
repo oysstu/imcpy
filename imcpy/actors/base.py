@@ -6,13 +6,13 @@ import tempfile
 from contextlib import suppress
 import types
 
-import pyimc
-from pyimc.decorators import *
-from pyimc.network.udp import IMCProtocolUDP, IMCSenderUDP
-from pyimc.node import IMCNode, IMCService
-from pyimc.exception import AmbiguousKeyError
+import imcpy
+from imcpy.decorators import *
+from imcpy.network.udp import IMCProtocolUDP, IMCSenderUDP
+from imcpy.node import IMCNode, IMCService
+from imcpy.exception import AmbiguousKeyError
 
-logger = logging.getLogger('pyimc.actors.base')
+logger = logging.getLogger('imcpy.actors.base')
 
 
 class IMCBase:
@@ -34,7 +34,7 @@ class IMCBase:
         self.static_port = static_port
         self.verbose_nodes = verbose_nodes
         self.log_enable = log_enable
-        self.log_root = os.path.join(tempfile.gettempdir(), 'pyimc') if log_root is None else log_root
+        self.log_root = os.path.join(tempfile.gettempdir(), 'imcpy') if log_root is None else log_root
 
         # Overridden in subclasses
         self.announce = None
@@ -45,7 +45,7 @@ class IMCBase:
         self._loop = None  # type: asyncio.BaseEventLoop
         self._task_mc = None  # type: asyncio.Task
         self._task_imc = None  # type: asyncio.Task
-        self._subs = {}  # type: Dict[Type[pyimc.Message], List[types.MethodType]]
+        self._subs = {}  # type: Dict[Type[imcpy.Message], List[types.MethodType]]
 
         # IMC/Multicast ports (assigned when socket is created)
         self._port_imc = None  # type: int
@@ -55,8 +55,8 @@ class IMCBase:
         self._nodes = {}  # type: Dict[Tuple[int, str], IMCNode]
 
         # Static transports
-        # Adding pyimc.Message transports all messages
-        self._static_transports = {}  # type: Dict[Type[pyimc.Message], List[IMCService]]
+        # Adding imcpy.Message transports all messages
+        self._static_transports = {}  # type: Dict[Type[imcpy.Message], List[IMCService]]
 
         # Runtime data
         self.t_start = None
@@ -87,10 +87,10 @@ class IMCBase:
         # IMC message log
         logger.info('Starting file log ({})'.format(self.log_dir))
         self.log_imc_fh = open(os.path.join(self.log_dir, 'Data.lsf'), 'wb')
-        log_ctl = pyimc.LoggingControl()
+        log_ctl = imcpy.LoggingControl()
         log_ctl.set_timestamp_now()
         log_ctl.src = self.announce.src
-        log_ctl.op = pyimc.LoggingControl.ControlOperationEnum.STARTED
+        log_ctl.op = imcpy.LoggingControl.ControlOperationEnum.STARTED
         log_ctl.name = dt_datestr + '/' + dt_timestr
         self.log_imc_fh.write(log_ctl.serialize())
 
@@ -98,10 +98,10 @@ class IMCBase:
         if self.log_imc_fh and not self.log_imc_fh.closed:
             logger.info('Stopping file log ({})'.format(self.log_dir))
             dt = datetime.datetime.today()
-            log_ctl = pyimc.LoggingControl()
+            log_ctl = imcpy.LoggingControl()
             log_ctl.set_timestamp_now()
             log_ctl.src = self.announce.src
-            log_ctl.op = pyimc.LoggingControl.ControlOperationEnum.STOPPED
+            log_ctl.op = imcpy.LoggingControl.ControlOperationEnum.STOPPED
             log_ctl.name = dt.strftime('%Y%m%d') + '/' + dt.strftime('%H%M%S')
             self.log_imc_fh.write(log_ctl.serialize())
             self.log_imc_fh.close()
@@ -186,18 +186,18 @@ class IMCBase:
             if self.log_enable:
                 self._log_stop()
 
-    def post_message(self, msg: pyimc.Message):
+    def post_message(self, msg: imcpy.Message):
         """
         Post a message to the subscribed functions
         :param msg: The IMC message to post
         :return:
         """
-        # Check that message is subclass of pyimc.Message
-        # Note: messages that exists in DUNE, but has no pybind11 bindings are returned as pyimc.Message
+        # Check that message is subclass of imcpy.Message
+        # Note: messages that exists in DUNE, but has no pybind11 bindings are returned as imcpy.Message
         class_hierarchy = inspect.getmro(type(msg))
-        if pyimc.Message in class_hierarchy:
+        if imcpy.Message in class_hierarchy:
             # Post message of known type
-            if type(msg) is not pyimc.Message:
+            if type(msg) is not imcpy.Message:
                 if type(msg) in self._subs:
                     for fn in self._subs[type(msg)]:
                         try:
@@ -209,17 +209,17 @@ class IMCBase:
                 logger.warning(
                     'Unknown IMC message received: {} ({}) from {}'.format(msg.msg_name, msg.msg_id, msg.src))
 
-            # Post messages to functions subscribed to all messages (pyimc.Message)
-            if pyimc.Message in self._subs:
-                for fn in self._subs[pyimc.Message]:
+            # Post messages to functions subscribed to all messages (imcpy.Message)
+            if imcpy.Message in self._subs:
+                for fn in self._subs[imcpy.Message]:
                     try:
                         fn(msg)
                     except Exception as e:
                         self.on_exception(loc=fn.__qualname__, exc=e)
         else:
-            logger.warning('Received message that is not subclass of pyimc.Message: {}'.format(type(msg)))
+            logger.warning('Received message that is not subclass of imcpy.Message: {}'.format(type(msg)))
 
-    def resolve_node_id(self, node_id: Union[int, str, Tuple[int, str], pyimc.Message, IMCNode]) -> IMCNode:
+    def resolve_node_id(self, node_id: Union[int, str, Tuple[int, str], imcpy.Message, IMCNode]) -> IMCNode:
         """
         This function searches the map of connected nodes and returns a match (if unique)
 
@@ -227,7 +227,7 @@ class IMCBase:
         KeyError: Node not found (not connected)
         AmbiguousKeyError: Multiple nodes matches the id (e.g multiple nodes announcing the same name)
         ValueError: Id parameter has an unexpected type
-        :param node_id: Can be one of the following: imcid(int), imcname(str), node(tuple(int, str)), pyimc.message
+        :param node_id: Can be one of the following: imcid(int), imcname(str), node(tuple(int, str)), imcpy.message
         :return: An instance of the IMCNode class
         """
 
@@ -254,7 +254,7 @@ class IMCBase:
         elif id_type is IMCNode:
             # Resolve by an preexisting IMCNode object
             return self.resolve_node_id((node_id.src, node_id.sys_name))
-        elif isinstance(node_id, pyimc.Message):
+        elif isinstance(node_id, imcpy.Message):
             # Resolve by imc address in received message (equivalent to imc id)
             return self.resolve_node_id(node_id.src)
         else:
@@ -275,7 +275,7 @@ class IMCBase:
         node = self.resolve_node_id(key)
         del self._nodes[(node.src, node.sys_name)]
 
-    def add_static_transport(self, imc_service: IMCService, msg_types: List[Type[pyimc.Message]]):
+    def add_static_transport(self, imc_service: IMCService, msg_types: List[Type[imcpy.Message]]):
         """
         Setup an outgoing static transport of the imc message types to the target imc service.
         :param imc_service: The destination imc service (must contain imc+udp)
@@ -300,7 +300,7 @@ class IMCBase:
         for svc in self._static_transports.get(type(msg), []):
             with IMCSenderUDP(svc.ip) as s:
                 s.send(message=msg, port=svc.port)
-        for svc in self._static_transports.get(pyimc.Message, []):
+        for svc in self._static_transports.get(imcpy.Message, []):
             with IMCSenderUDP(svc.ip) as s:
                 s.send(message=msg, port=svc.port)
 
@@ -417,7 +417,7 @@ class IMCBase:
         if self.verbose_nodes:
             logger.debug('Connected nodes: {}'.format(list(self._nodes.keys())))
 
-    @Subscribe(pyimc.Announce)
+    @Subscribe(imcpy.Announce)
     def _recv_announce(self, msg):
         # TODO: Check if IP of a node changes
 
@@ -446,7 +446,7 @@ class IMCBase:
             except NotImplementedError:
                 pass
 
-    @Subscribe(pyimc.Heartbeat)
+    @Subscribe(imcpy.Heartbeat)
     def _recv_heartbeat(self, msg):
         try:
             node = self.resolve_node_id(msg)
@@ -461,12 +461,12 @@ class IMCBase:
         except (AmbiguousKeyError, KeyError):
             logger.debug('Received heartbeat from unannounced node ({})'.format(msg.src))
 
-    @Subscribe(pyimc.EntityList)
+    @Subscribe(imcpy.EntityList)
     def _recv_entity_list(self, msg):
         """
         Process received entity lists
         """
-        OpEnum = pyimc.EntityList.OperationEnum
+        OpEnum = imcpy.EntityList.OperationEnum
         if msg.op == OpEnum.REPORT:
             try:
                 node = self.resolve_node_id(msg)
@@ -474,8 +474,8 @@ class IMCBase:
             except (AmbiguousKeyError, KeyError):
                 logger.debug('Unable to resolve node when updating EntityList')
 
-    @Subscribe(pyimc.EntityInfo)
-    def _recv_entity_info(self, msg: pyimc.EntityInfo):
+    @Subscribe(imcpy.EntityInfo)
+    def _recv_entity_info(self, msg: imcpy.EntityInfo):
         """
         Process entity info messages. Mostly for systems that does not announce EntityList
         """

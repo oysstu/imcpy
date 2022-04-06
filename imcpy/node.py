@@ -4,10 +4,10 @@ from urllib.parse import urlparse
 import time
 from typing import Dict
 
-from pyimc.network.udp import IMCSenderUDP
-from pyimc.network.utils import get_interfaces
+from imcpy.network.udp import IMCSenderUDP
+from imcpy.network.utils import get_interfaces
 
-logger = logging.getLogger('pyimc.node')
+logger = logging.getLogger('imcpy.node')
 
 
 class IMCService:
