@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.8)
 
 SET(PROJ_NAME _imcpy)
 project(${PROJ_NAME})

@@ -1,8 +1,12 @@
-import os, re, sys, platform, subprocess, shutil, urllib.request, zipfile, io, hashlib
+import os
+import sys
+import platform
+import subprocess
+import shutil
+import hashlib
 
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
-from distutils.version import LooseVersion
 
 from utils.generate_bindings import IMCPybind, IMCPyi
 
@@ -17,15 +21,10 @@ class CMakeExtension(Extension):
 class CMakeBuild(build_ext):
     def run(self):
         try:
-            out = subprocess.check_output(['cmake', '--version'])
+            subprocess.check_output(['cmake', '--version'])
         except OSError:
             raise RuntimeError("CMake must be installed to build the following extensions: " +
                                ", ".join(e.name for e in self.extensions))
-
-        if platform.system() == "Windows":
-            cmake_version = LooseVersion(re.search(r'version\s*([\d.]+)', out.decode()).group(1))
-            if cmake_version < '3.1.0':
-                raise RuntimeError("CMake >= 3.1.0 is required on Windows")
 
         for ext in self.extensions:
             self.build_extension(ext)
@@ -129,8 +128,20 @@ if __name__ == '__main__':
         author='Oystein Sture',
         author_email='oysstu@gmail.com',
         description='Python bindings for DUNE-IMC',
+        url="https://github.com/oysstu/imcpy",
+        project_urls={
+            "Bug Tracker": "https://github.com/oysstu/imcpy/issues",
+        },
         license='MIT',
         long_description='',
+        classifiers=[
+            "Programming Language :: Python :: 3",
+            "License :: OSI Approved :: MIT License",
+            'Intended Audience :: Developers',
+            'Intended Audience :: Other Audience',
+            'Intended Audience :: Science/Research',
+            'Topic :: Scientific/Engineering',
+        ],
         packages=['imcpy', 
                   'imcpy.actors', 
                   'imcpy.algorithms', 
