@@ -60,9 +60,14 @@ jobs:
             platform_id: manylinux_x86_64
             manylinux_image: manylinux2014
 
-          # Linux aarch64 manylinux2014 (limited to two versions due to compile time)
+          # Linux aarch64 manylinux2014
           - os: ubuntu-latest
             python: 38
+            bitness: 64
+            platform_id: manylinux_aarch64
+            manylinux_image: manylinux2014
+          - os: ubuntu-latest
+            python: 39
             bitness: 64
             platform_id: manylinux_aarch64
             manylinux_image: manylinux2014
