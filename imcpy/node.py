@@ -2,7 +2,7 @@ import logging
 import ipaddress as ip
 from urllib.parse import urlparse
 import time
-from typing import Dict
+from typing import Dict, List, Optional
 
 from imcpy.network.udp import IMCSenderUDP
 from imcpy.network.utils import get_interfaces
@@ -69,7 +69,7 @@ class IMCNode:
         # Unparsed services string
         self.services_string = ''  # type: str
         # Parsed services
-        self.services = {}  # type: Dict[str, IMCService]
+        self.services = {}  # type: Dict[str, List[IMCService]]
         # Parsed entities
         self.entities = {}  # type: Dict[str, int]
         # Node arguments
@@ -82,9 +82,9 @@ class IMCNode:
         #
 
         # Time of last heartbeat
-        self.t_last_heartbeat = None  # type: float
+        self.t_last_heartbeat = None  # type: Optional[float]
         # Time of last announce
-        self.t_last_announce = None  # type: float
+        self.t_last_announce = None  # type: Optional[float]
 
     @property
     def name(self):
@@ -153,7 +153,7 @@ class IMCNode:
 
         # Determine which service to send to based on ip/netmask
         # Note: this might not account for funky ip routing
-        networks = [ip.ip_interface(x[1] + '/' + x[2]).network for x in get_interfaces(ignore_local=True)]
+        networks = [ip.IPv4Network((addr, mask), strict=False) for name, addr, mask in get_interfaces(ignore_local=True, only_ipv4=True)]
         for svc in imcudp_services:
             svc_ip = ip.ip_address(svc.ip)
 

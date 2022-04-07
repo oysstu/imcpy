@@ -1,23 +1,18 @@
-import netifaces
+import ifaddr
+from typing import List, Tuple
 
-
-def get_interfaces(ignore_local=True):
-    """
-    Retrieves the address of all external interfaces (lo 127.0.0.1 ignored)
-    :return: List of tuples (interface, addr)
-    """
-    interfaces = netifaces.interfaces()
-    if_ext = []
-    for i in interfaces:
-        if i == 'lo' and ignore_local:
-            continue
-        iface = netifaces.ifaddresses(i).get(netifaces.AF_INET)
-        if iface:
-            for j in iface:
-                if_ext.append((i, j['addr'], j['netmask']))
-
-    return if_ext
+def get_interfaces(ignore_local=True, only_ipv4=True) -> List[Tuple[str, str, int]]:
+    ifaces = []
+    for adapter in ifaddr.get_adapters():
+        if adapter.name != 'lo' or not ignore_local:
+            for ip in adapter.ips:
+                if type(ip.ip) is str or not only_ipv4:
+                    ifaces.append((adapter.name, ip.ip, ip.network_prefix))
+    
+    return ifaces
 
 
 if __name__ == '__main__':
     pass
+
+    

@@ -153,7 +153,7 @@ if __name__ == '__main__':
                   'imcpy.network',
                   'utils'],
         python_requires='>=3.6',
-        install_requires=['netifaces'],
+        install_requires=['ifaddr'],
         extras_require={'LSFExporter': ['pandas']},
         package_data={'': ['_imcpy.pyi'],
                       'imcpy.coordinates': ['*.pyi'],
