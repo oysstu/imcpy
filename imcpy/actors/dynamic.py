@@ -1,12 +1,13 @@
+import logging
+from operator import itemgetter
 import socket
 import time
-from operator import itemgetter
-import logging
 
 import imcpy
 from imcpy.actors import IMCBase
 from imcpy.common import multicast_ip
-from imcpy.decorators import Subscribe, Periodic
+from imcpy.decorators import Periodic
+from imcpy.decorators import Subscribe
 from imcpy.exception import AmbiguousKeyError
 from imcpy.network.udp import IMCSenderUDP
 from imcpy.network.utils import get_interfaces
@@ -80,7 +81,7 @@ class DynamicActor(IMCBase):
                 self.services = ['imc+udp://{}:{}/'.format(adr[1], self._port_imc) for adr in get_interfaces(False)]
 
             self.announce.services = ';'.join(self.services)
-            with IMCSenderUDP(multicast_ip) as s:
+            with IMCSenderUDP(multicast_ip, local_port=None, all_interfaces=True) as s:
                 self.announce.set_timestamp_now()
                 for i in range(30100, 30105):
                     s.send(self.announce, i)

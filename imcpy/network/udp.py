@@ -1,16 +1,22 @@
-import socket, struct, asyncio, logging
+import asyncio
+import logging
+import socket
+import struct
+
 import imcpy
 from imcpy.common import multicast_ip
+from imcpy.network.utils import get_interfaces
 
 logger = logging.getLogger('imcpy.udp')
 
 
 class IMCSenderUDP:
-    def __init__(self, ip_dst, local_port=None):
+    def __init__(self, ip_dst, local_port=None, all_interfaces=False):
         self.dst = ip_dst
         self.local_port = local_port
+        self.all_interfaces = all_interfaces
 
-    def __enter__(self):
+    def open(self):
         # Set up socket
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 10)
@@ -19,15 +25,31 @@ class IMCSenderUDP:
             # Bind the socket to a local interface
             self.sock.bind(('', self.local_port))
 
+    def close(self):
+        self.sock.close()
+
+    def __enter__(self):
+        self.open()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.sock.close()
+        self.close()
 
     def send(self, message, port, log_fh=None):
         if message.__module__ == '_imcpy':
             b = imcpy.Packet.serialize(message)
-            self.sock.sendto(b, (self.dst, port))
+
+            if self.all_interfaces:
+                # Send one message per interface
+                interfaces = get_interfaces(ignore_local=False, only_ipv4=True)
+                for interface in interfaces:
+                    self.sock.setsockopt(socket.IPPROTO_IP,
+                                         socket.IP_MULTICAST_IF,
+                                         socket.inet_aton(interface[1]))
+                    self.sock.sendto(b, (self.dst, port))
+            else:
+                # Send on default route
+                self.sock.sendto(b, (self.dst, port))
 
             if log_fh and not log_fh.closed:
                 log_fh.write(b)
@@ -119,7 +141,7 @@ def get_multicast_socket(sock=None, static_port=None):
             sock.bind(('0.0.0.0', static_port))
         except OSError:
             # Socket already in use without SO_REUSEADDR enabled
-            raise RuntimeError('The IMC multicast port specified is already in use ({}).'.format(port))
+            raise RuntimeError(f'The IMC multicast port specified is already in use ({port}).')
     else:
         port = None
         for i in range(30100, 30105):
@@ -150,7 +172,7 @@ def get_imc_socket(sock=None, static_port=None):
             sock.bind(('0.0.0.0', static_port))
         except OSError:
             # Socket already in use without SO_REUSEADDR enabled
-            raise RuntimeError('The static IMC port specified is already in use ({}).'.format(static_port))
+            raise RuntimeError(f'The static IMC port specified is already in use ({static_port}).')
     else:
         # Try ports in the typical IMC/DUNE range
         port = None
