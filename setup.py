@@ -1,14 +1,16 @@
-import os
-import sys
-import platform
-import subprocess
-import shutil
 import hashlib
+import os
+import platform
+import shutil
+import subprocess
+import sys
 
-from setuptools import setup, Extension
+from setuptools import Extension
+from setuptools import setup
 from setuptools.command.build_ext import build_ext
 
-from utils.generate_bindings import IMCPybind, IMCPyi
+from utils.generate_bindings import IMCPybind
+from utils.generate_bindings import IMCPyi
 
 
 class CMakeExtension(Extension):
@@ -127,7 +129,7 @@ if __name__ == '__main__':
 
     setup(
         name='imcpy',
-        version='1.0.6',
+        version='1.0.7',
         author='Oystein Sture',
         author_email='oysstu@gmail.com',
         description='Python bindings for DUNE-IMC',
@@ -146,10 +148,10 @@ if __name__ == '__main__':
             'Intended Audience :: Science/Research',
             'Topic :: Scientific/Engineering',
         ],
-        packages=['imcpy', 
-                  'imcpy.actors', 
-                  'imcpy.algorithms', 
-                  'imcpy.coordinates', 
+        packages=['imcpy',
+                  'imcpy.actors',
+                  'imcpy.algorithms',
+                  'imcpy.coordinates',
                   'imcpy.network',
                   'utils'],
         python_requires='>=3.6',
