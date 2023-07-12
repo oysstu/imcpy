@@ -35,11 +35,11 @@ jobs:
             bitness: 64
             platform_id: win_amd64
           - os: windows-latest
-            python: 39
+            python: 310
             bitness: 64
             platform_id: win_amd64
           - os: windows-latest
-            python: 310
+            python: 311
             bitness: 64
             platform_id: win_amd64
 
@@ -50,12 +50,12 @@ jobs:
             platform_id: manylinux_x86_64
             manylinux_image: manylinux2014
           - os: ubuntu-latest
-            python: 39
+            python: 310
             bitness: 64
             platform_id: manylinux_x86_64
             manylinux_image: manylinux2014
           - os: ubuntu-latest
-            python: 310
+            python: 311
             bitness: 64
             platform_id: manylinux_x86_64
             manylinux_image: manylinux2014
@@ -67,12 +67,12 @@ jobs:
             platform_id: manylinux_aarch64
             manylinux_image: manylinux2014
           - os: ubuntu-latest
-            python: 39
+            python: 310
             bitness: 64
             platform_id: manylinux_aarch64
             manylinux_image: manylinux2014
           - os: ubuntu-latest
-            python: 310
+            python: 311
             bitness: 64
             platform_id: manylinux_aarch64
             manylinux_image: manylinux2014
