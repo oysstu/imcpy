@@ -1,14 +1,17 @@
 import os
+import asyncio
+import inspect
 import socket
 import datetime
 import logging
+import sys
 import tempfile
 from contextlib import suppress
 import types
 
 import imcpy
 from imcpy.decorators import *
-from imcpy.network.udp import IMCProtocolUDP, IMCSenderUDP
+from imcpy.network.udp import IMCProtocolUDP, IMCSenderUDP, get_imc_socket, get_multicast_socket
 from imcpy.node import IMCNode, IMCService
 from imcpy.exception import AmbiguousKeyError
 
@@ -342,21 +345,23 @@ class IMCBase:
         Add asyncio datagram endpoint for all subscriptions
         """
         # Add datagram endpoint for multicast announce
-        multicast_listener = self._loop.create_datagram_endpoint(lambda: IMCProtocolUDP(self, is_multicast=True),
-                                                                 family=socket.AF_INET)
+        mc_sock = get_multicast_socket()
+        self._port_mc = mc_sock.getsockname()[1]
+        multicast_listener = self._loop.create_datagram_endpoint(lambda: IMCProtocolUDP(self),
+                                                                 sock=mc_sock)
 
         # Add datagram endpoint for UDP IMC messages
-        imc_listener = self._loop.create_datagram_endpoint(lambda: IMCProtocolUDP(self,
-                                                                                  is_multicast=False,
-                                                                                  static_port=self.static_port),
-                                                           family=socket.AF_INET)
+        imc_sock = get_imc_socket(static_port=self.static_port)
+        self._port_imc = imc_sock.getsockname()[1]
+        imc_listener = self._loop.create_datagram_endpoint(lambda: IMCProtocolUDP(self),
+                                                           sock=imc_sock)
 
         if sys.version_info < (3, 4, 4):
             self._task_mc = self._loop.create_task(multicast_listener)
             self._task_imc = self._loop.create_task(imc_listener)
         else:
-            self._task_mc = asyncio.ensure_future(multicast_listener)
-            self._task_imc = asyncio.ensure_future(imc_listener)
+            self._task_mc = asyncio.ensure_future(multicast_listener, loop=self._loop)
+            self._task_imc = asyncio.ensure_future(imc_listener, loop=self._loop)
 
     def _setup_event_loop(self):
         """
