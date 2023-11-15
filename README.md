@@ -17,7 +17,7 @@ Check the release notes or pypi for the precompiled architectures and python ver
 
 #### Clone the project recursively
 ```bash
-git clone --recursive git://github.com/oysstu/imcpy.git
+git clone --recursive https://github.com/oysstu/imcpy.git
 ```
 This includes the pybind11 submodule.
 
