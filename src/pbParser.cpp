@@ -23,7 +23,7 @@ void pbParser(py::module &m) {
             }
         }
 
-      return py::make_tuple<py::return_value_policy::take_ownership>(nullptr, 0);
+      return py::make_tuple<py::return_value_policy::take_ownership>(nullptr, data_view.size());
     }, py::return_value_policy::take_ownership, "data"_a, "Parse data and return message and consumbed bytes if found.");
 }
 
