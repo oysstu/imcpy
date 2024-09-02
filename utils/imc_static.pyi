@@ -1,4 +1,4 @@
-from typing import Generic, Iterable, List, TypeVar, Union
+from typing import Generic, Iterable, List, Optional, Tuple, TypeVar, Union
 
 ### -------- Typing for non-generated classes ---------  ###
 
@@ -50,5 +50,10 @@ class Packet:
     def deserialize(b: bytes) -> Message: ...
     @staticmethod
     def serialize(msg: Message) -> bytes: ...
+
+class Parser:
+    def __init__(self) -> None: ...
+    def reset(self) -> None: ...
+    def parse(self, b: bytes) -> Tuple[Optional[Message], int]: ...
 
 ### -------- Typing for generated bindings ---------  ###
