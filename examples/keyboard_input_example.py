@@ -2,15 +2,15 @@
 Illustrates how to run an actor which responds to console input (e.g. over ssh).
 """
 
-
+import asyncio
 import logging
 import sys
 from typing import Tuple
-import asyncio
 
 import imcpy
+import imcpy.coordinates
 from imcpy.actors.dynamic import DynamicActor
-from imcpy.decorators import Subscribe, RunOnce
+from imcpy.decorators import RunOnce, Subscribe
 
 logger = logging.getLogger('examples.KeyboardActor')
 
@@ -118,5 +118,3 @@ if __name__ == '__main__':
 
     # This command starts the asyncio event loop
     actor.run()
-
-

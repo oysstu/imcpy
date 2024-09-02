@@ -37,7 +37,7 @@ class PlanActor(DynamicActor):
             node = self.resolve_node_id(self.target)
 
             # Request the PlanDB state
-            logging.debug("Requesting PlanDB state from target.")
+            logging.debug('Requesting PlanDB state from target.')
             db_req = imcpy.PlanDB()
 
             # Enumerations are exposed as a subclass of the message
@@ -53,7 +53,6 @@ class PlanActor(DynamicActor):
             # Target system is not connected
             logging.debug('Target system is not connected.')
 
-
     @Subscribe(imcpy.PlanDB)
     def recv_plandb(self, msg: imcpy.PlanDB):
         try:
@@ -62,7 +61,7 @@ class PlanActor(DynamicActor):
             if msg.src == node.id:
                 # Check for a successful PlanDB request of the correct type
                 if msg.type == imcpy.PlanDB.TypeEnum.SUCCESS and msg.op == imcpy.PlanDB.OperationEnum.GET_STATE:
-                    dbstate = msg.arg  # type: imcpy.PlanDBState
+                    dbstate: imcpy.PlanDBState = msg.arg
 
                     # The IMC MessageList type interface is designed to be as close to a python list as possible
                     # It has support for iteration, indexing, slicing, append, extend, len, in

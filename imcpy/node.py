@@ -1,8 +1,8 @@
-import logging
 import ipaddress as ip
-from urllib.parse import urlparse
+import logging
 import time
 from typing import Dict, List, Optional
+from urllib.parse import urlparse
 
 from imcpy.network.udp import IMCSenderUDP
 from imcpy.network.utils import get_interfaces
@@ -14,6 +14,7 @@ class IMCService:
     """
     IMC service consisting of an ip/port and service specifier
     """
+
     @staticmethod
     def from_url(service_url):
         p = urlparse(service_url)
@@ -41,6 +42,7 @@ class IMCNode:
     """
     An IMC node consisting of it's address, services and entities.
     """
+
     @staticmethod
     def from_announce(msg, service_filter=None, is_fixed=False):
         node = IMCNode(src=msg.src, sys_name=msg.sys_name, service_filter=service_filter, is_fixed=is_fixed)
@@ -63,15 +65,15 @@ class IMCNode:
         #
 
         # System imc id
-        self.src = src  # type: int
+        self.src: int = src
         # System imc name
-        self.sys_name = sys_name  # type: str
+        self.sys_name: str = sys_name
         # Unparsed services string
-        self.services_string = ''  # type: str
+        self.services_string: str = ''
         # Parsed services
-        self.services = {}  # type: Dict[str, List[IMCService]]
+        self.services: Dict[str, List[IMCService]] = {}
         # Parsed entities
-        self.entities = {}  # type: Dict[str, int]
+        self.entities: Dict[str, int] = {}
         # Node arguments
         self.service_filter = service_filter
         # Fixed nodes are never removed from the node map (no timeout)
@@ -82,9 +84,9 @@ class IMCNode:
         #
 
         # Time of last heartbeat
-        self.t_last_heartbeat = None  # type: Optional[float]
+        self.t_last_heartbeat: Optional[float] = None
         # Time of last announce
-        self.t_last_announce = None  # type: Optional[float]
+        self.t_last_announce: Optional[float] = None
 
     @property
     def name(self):
@@ -118,7 +120,7 @@ class IMCNode:
         """
         Parse the service string from an announce message to IMCService objects
         :param service_string: The service string from an announce message (protocols/ips/ports)
-       """
+        """
         self.services = {}
         for svc in service_string.split(';'):
             s = IMCService.from_url(svc)
@@ -138,7 +140,7 @@ class IMCNode:
         Sends the IMC message to the node, filling in the destination
         :param msg: The IMC message to send
         :param log_fh: File handle to open IMC message log file
-        :return: 
+        :return:
         """
 
         # Set destination of message to IMC ID of this node
@@ -153,7 +155,10 @@ class IMCNode:
 
         # Determine which service to send to based on ip/netmask
         # Note: this might not account for funky ip routing
-        networks = [ip.IPv4Network((addr, mask), strict=False) for name, addr, mask in get_interfaces(ignore_local=True, only_ipv4=True)]
+        networks = [
+            ip.IPv4Network((addr, mask), strict=False)
+            for name, addr, mask in get_interfaces(ignore_local=True, only_ipv4=True)
+        ]
         for svc in imcudp_services:
             svc_ip = ip.ip_address(svc.ip)
 

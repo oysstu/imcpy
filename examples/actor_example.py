@@ -9,9 +9,10 @@ The event loop is based on asyncio. Interactions with asyncio is done through th
 
 import logging
 import sys
-from typing import Tuple
+from typing import Optional, Tuple
 
 import imcpy
+import imcpy.coordinates
 from imcpy.actors.dynamic import DynamicActor
 from imcpy.decorators import Periodic, Subscribe
 
@@ -24,11 +25,10 @@ class ExampleActor(DynamicActor):
         """
         super().__init__()
 
-        self.last_pos = None  # type: Tuple[float, float, float]
+        self.last_pos: Optional[Tuple[float, float, float]] = None
 
         # This list contains the target systems to maintain communications with
         self.heartbeat.append(target_name)
-
 
     @Subscribe(imcpy.EstimatedState)
     def recv_estate(self, msg: imcpy.EstimatedState):
@@ -58,6 +58,7 @@ class ExampleActor(DynamicActor):
         :return:
         """
         logging.info('Periodic function was executed.')
+
 
 if __name__ == '__main__':
     # Setup logging level and console output

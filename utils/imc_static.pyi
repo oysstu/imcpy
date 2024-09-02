@@ -1,4 +1,4 @@
-from typing import Generic, TypeVar, Iterable, Union, Sequence, List
+from typing import Generic, Iterable, List, TypeVar, Union
 
 ### -------- Typing for non-generated classes ---------  ###
 
@@ -23,15 +23,16 @@ class Message:
     def serialize_fields(self) -> bytes: ...
     def fields_equal(self, other: Message) -> bool: ...
     def __init__(self):
-        self.timestamp = None  # type: float
-        self.src = None  # type: int
-        self.src_ent = None  # type: int
-        self.dst = None  # type: int
-        self.dst_ent = None  # type: int
-        self.sub_id = None  # type: int
+        self.timestamp: float = 0.0
+        self.src: int = 0
+        self.src_ent: int = 0
+        self.dst: int = 0
+        self.dst_ent: int = 0
+        self.sub_id: int = 0
 
 T = TypeVar('T')
-class MessageList(Sequence[T]):
+
+class MessageList(Generic[T]):
     def set_parent(self, parent: Message) -> None: ...
     def clear(self) -> None: ...
     @property
@@ -51,4 +52,3 @@ class Packet:
     def serialize(msg: Message) -> bytes: ...
 
 ### -------- Typing for generated bindings ---------  ###
-

@@ -4,11 +4,16 @@ requires = [
     "wheel",
     "cmake>=3.8",
 ]
+build-backend = "setuptools.build_meta"
 
 [tool.poetry]
 packages = [
     { include = "utils" },
 ]
 
+[tool.ruff]
+line-length = 120
+target-version = "py312"
 
-build-backend = "setuptools.build_meta"
+[tool.ruff.format]
+quote-style = "single"

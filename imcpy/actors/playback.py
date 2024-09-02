@@ -1,12 +1,12 @@
-import time
 import asyncio
 import logging
 import sys
+import time
 
 import imcpy
 from imcpy.actors.dynamic import DynamicActor
-from imcpy.lsf import LSFReader
 from imcpy.decorators import RunOnce, Subscribe
+from imcpy.lsf import LSFReader
 
 logger = logging.getLogger('imcpy.actors.playback')
 
@@ -17,7 +17,7 @@ class PlaybackActor(DynamicActor):
     Messages are dispatched according to the offset from the first message (timestamp) from that system
     """
 
-    def __init__(self, lsf_path, speed: float=1.0, offset_time: bool=True, start_time: float=None):
+    def __init__(self, lsf_path, speed: float = 1.0, offset_time: bool = True, start_time: float = None):
         """
         :param speed: The speed factor to play back the data with (1.0: realtime, negative: no delay)
         :param offset_time: Optionally offset messages to current system time
@@ -69,7 +69,7 @@ class PlaybackActor(DynamicActor):
 
             # Sleep until message should be posted
             # Also important to give CPU time to other tasks
-            t_sleep = (t_msg - time.time())/self.speed if self.speed > 0 else 0
+            t_sleep = (t_msg - time.time()) / self.speed if self.speed > 0 else 0
             await asyncio.sleep(max(0, t_sleep))
 
             # Post message to actor
@@ -78,5 +78,3 @@ class PlaybackActor(DynamicActor):
 
 if __name__ == '__main__':
     pass
-
-

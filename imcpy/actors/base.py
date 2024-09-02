@@ -1,19 +1,21 @@
-import os
 import asyncio
-import inspect
-import socket
 import datetime
+import inspect
 import logging
+import os
+import socket
 import sys
 import tempfile
-from contextlib import suppress
+import time
 import types
+from contextlib import suppress
+from typing import Dict, List, Optional, Tuple, Type, Union
 
 import imcpy
 from imcpy.decorators import *
+from imcpy.exception import AmbiguousKeyError
 from imcpy.network.udp import IMCProtocolUDP, IMCSenderUDP, get_imc_socket, get_multicast_socket
 from imcpy.node import IMCNode, IMCService
-from imcpy.exception import AmbiguousKeyError
 
 logger = logging.getLogger('imcpy.actors.base')
 
@@ -23,6 +25,7 @@ class IMCBase:
     Base class for IMC communications.
     Implements an event loop, subscriptions, IMC node bookkeeping
     """
+
     def __init__(self, imc_id=0x3334, static_port=None, verbose_nodes=False, log_enable=False, log_root=None):
         """
         Initialize the IMC comms. Does not start the event loop until run() is called
@@ -39,27 +42,32 @@ class IMCBase:
         self.log_enable = log_enable
         self.log_root = os.path.join(tempfile.gettempdir(), 'imcpy') if log_root is None else log_root
 
-        # Overridden in subclasses
-        self.announce = None
+        # Overridden/updated in subclasses
+        self.announce = imcpy.Announce()
+        self.announce.src = self.imc_id
+        self.announce.sys_name = f'ccu-imcpy-{socket.gethostname().lower()}'
+        self.announce.sys_type = imcpy.SystemType.CCU
+        self.announce.owner = 0xFFFF
+        self.announce.src_ent = 1
         self.entities = {'Daemon': 0}
-        self.services = None  # type: List[str]
+        self.services: List[str] = []
 
         # Asyncio loop, tasks, and callbacks
-        self._loop = None  # type: asyncio.BaseEventLoop
-        self._task_mc = None  # type: asyncio.Task
-        self._task_imc = None  # type: asyncio.Task
-        self._subs = {}  # type: Dict[Type[imcpy.Message], List[types.MethodType]]
+        self._loop: Optional[asyncio.BaseEventLoop] = None
+        self._task_mc: Optional[asyncio.Task] = None
+        self._task_imc: Optional[asyncio.Task] = None
+        self._subs: Dict[Type[imcpy.Message], List[types.MethodType]] = {}
 
         # IMC/Multicast ports (assigned when socket is created)
-        self._port_imc = None  # type: int
-        self._port_mc = None  # type: int
+        self._port_imc: Optional[int] = None
+        self._port_mc: Optional[int] = None
 
         # Using a map from (imc address, sys_name) to a node instance
-        self._nodes = {}  # type: Dict[Tuple[int, str], IMCNode]
+        self._nodes: Dict[Tuple[int, str], IMCNode] = {}
 
         # Static transports
         # Adding imcpy.Message transports all messages
-        self._static_transports = {}  # type: Dict[Type[imcpy.Message], List[IMCService]]
+        self._static_transports: Dict[Type[imcpy.Message], List[IMCService]] = {}
 
         # Runtime data
         self.t_start = None
@@ -88,7 +96,7 @@ class IMCBase:
         logging.getLogger('').addHandler(self.log_console_fh)  # Add to root logger
 
         # IMC message log
-        logger.info('Starting file log ({})'.format(self.log_dir))
+        logger.info(f'Starting file log ({self.log_dir})')
         self.log_imc_fh = open(os.path.join(self.log_dir, 'Data.lsf'), 'wb')
         log_ctl = imcpy.LoggingControl()
         log_ctl.set_timestamp_now()
@@ -99,7 +107,7 @@ class IMCBase:
 
     def _log_stop(self):
         if self.log_imc_fh and not self.log_imc_fh.closed:
-            logger.info('Stopping file log ({})'.format(self.log_dir))
+            logger.info(f'Stopping file log ({self.log_dir})')
             dt = datetime.datetime.today()
             log_ctl = imcpy.LoggingControl()
             log_ctl.set_timestamp_now()
@@ -146,17 +154,18 @@ class IMCBase:
         Cancels all running tasks and stops the event loop.
         :return:
         """
+        logger.info('Stop called by user. Cancelling all running tasks.')
         loop = self._loop
 
-        logger.info('Stop called by user. Cancelling all running tasks.')
-        for task in asyncio.all_tasks(loop):
-            task.cancel()
+        if loop is not None:
+            for task in asyncio.all_tasks(loop):
+                task.cancel()
 
-        async def exit_event_loop():
-            logger.info('Tasks cancelled. Stopping event loop.')
-            loop.stop()
+            async def exit_event_loop():
+                logger.info('Tasks cancelled. Stopping event loop.')
+                loop.stop()
 
-        asyncio.ensure_future(exit_event_loop())
+            asyncio.ensure_future(exit_event_loop())
 
     def run(self):
         """
@@ -209,8 +218,7 @@ class IMCBase:
                             self.on_exception(loc=fn.__qualname__, exc=e)
             else:
                 # Emit warning on IMC type without bindings
-                logger.warning(
-                    'Unknown IMC message received: {} ({}) from {}'.format(msg.msg_name, msg.msg_id, msg.src))
+                logger.warning(f'Unknown IMC message received: {msg.msg_name} ({msg.msg_id}) from {msg.src}')
 
             # Post messages to functions subscribed to all messages (imcpy.Message)
             if imcpy.Message in self._subs:
@@ -220,7 +228,7 @@ class IMCBase:
                     except Exception as e:
                         self.on_exception(loc=fn.__qualname__, exc=e)
         else:
-            logger.warning('Received message that is not subclass of imcpy.Message: {}'.format(type(msg)))
+            logger.warning(f'Received message that is not subclass of imcpy.Message: {type(msg)}')
 
     def resolve_node_id(self, node_id: Union[int, str, Tuple[int, str], imcpy.Message, IMCNode]) -> IMCNode:
         """
@@ -235,11 +243,10 @@ class IMCBase:
         """
 
         # Resolve IMCNode
-        id_type = type(node_id)
-        if id_type is str or id_type is int:
+        if type(node_id) is str or type(node_id) is int:
             # Type int or str: either imc name or imc id
             # Search for keys with the name or id, raise exception if not found or ambiguous
-            idx = 0 if id_type is int else 1
+            idx = 0 if type(node_id) is int else 1
             possible_nodes = [x for x in self._nodes.keys() if x[idx] == node_id]
             if not possible_nodes:
                 raise KeyError('Specified IMC node does not exist.')
@@ -247,21 +254,21 @@ class IMCBase:
                 raise AmbiguousKeyError('Specified IMC node has multiple possible choices', choices=possible_nodes)
             else:
                 return self._nodes[possible_nodes[0]]
-        elif id_type is tuple:
+        elif type(node_id) is tuple:
             # Type Tuple(int, str): unique identifier of both imc id and name
             # Determine the correct order of arguments
             if type(node_id[0]) is int and type(node_id[1]) is str:
                 return self._nodes[node_id]
             else:
                 raise TypeError('Node id tuple must be (int, str).')
-        elif id_type is IMCNode:
+        elif type(node_id) is IMCNode:
             # Resolve by an preexisting IMCNode object
             return self.resolve_node_id((node_id.src, node_id.sys_name))
         elif isinstance(node_id, imcpy.Message):
             # Resolve by imc address in received message (equivalent to imc id)
             return self.resolve_node_id(node_id.src)
         else:
-            raise TypeError('Expected node_id as int, str, tuple(int,str) or Message, received {}'.format(id_type))
+            raise TypeError(f'Expected node_id as int, str, tuple(int,str) or Message, received {type(node_id)}')
 
     def add_node(self, node: IMCNode):
         """
@@ -334,7 +341,7 @@ class IMCBase:
         Can be overridden in subclasses to handle uncaught exceptions in @Subscribe, @Periodic, @RunOnce functions
         :return:
         """
-        logger.error('Uncaught exception ({exctype}) in {loc}: {msg}'.format(loc=loc, exctype=type(exc).__qualname__, msg=exc))
+        logger.error(f'Uncaught exception ({type(exc).__qualname__}) in {loc}: {exc}')
 
     #
     # Private
@@ -347,14 +354,12 @@ class IMCBase:
         # Add datagram endpoint for multicast announce
         mc_sock = get_multicast_socket()
         self._port_mc = mc_sock.getsockname()[1]
-        multicast_listener = self._loop.create_datagram_endpoint(lambda: IMCProtocolUDP(self),
-                                                                 sock=mc_sock)
+        multicast_listener = self._loop.create_datagram_endpoint(lambda: IMCProtocolUDP(self), sock=mc_sock)
 
         # Add datagram endpoint for UDP IMC messages
         imc_sock = get_imc_socket(static_port=self.static_port)
         self._port_imc = imc_sock.getsockname()[1]
-        imc_listener = self._loop.create_datagram_endpoint(lambda: IMCProtocolUDP(self),
-                                                           sock=imc_sock)
+        imc_listener = self._loop.create_datagram_endpoint(lambda: IMCProtocolUDP(self), sock=imc_sock)
 
         if sys.version_info < (3, 4, 4):
             self._task_mc = self._loop.create_task(multicast_listener)
@@ -404,7 +409,7 @@ class IMCBase:
             has_heartbeat = type(node.t_last_heartbeat) is float and (t - node.t_last_heartbeat) < 60
             has_announce = node.t_last_announce is not None and (t - node.t_last_announce) < 60
             if not (has_heartbeat or has_announce) and not node.is_fixed:
-                logger.info('Connection to node "{}" timed out'.format(node))
+                logger.info(f'Connection to node "{node}" timed out')
                 rm_keys.append(key)
 
         for key in rm_keys:
@@ -415,12 +420,12 @@ class IMCBase:
                 except NotImplementedError:
                     pass
             except (KeyError, AttributeError) as e:
-                logger.exception('Encountered exception when removing node ({})'.format(e.msg))
+                logger.exception(f'Encountered exception when removing node ({e.msg})')
 
     @Periodic(10)
     def _print_connected_nodes(self):
         if self.verbose_nodes:
-            logger.debug('Connected nodes: {}'.format(list(self._nodes.keys())))
+            logger.debug(f'Connected nodes: {list(self._nodes.keys())}')
 
     @Subscribe(imcpy.Announce)
     def _recv_announce(self, msg):
@@ -430,7 +435,7 @@ class IMCBase:
         if self.announce and msg.src == self.announce.src:
             # Is another system broadcasting our IMC id?
             if msg.sys_name != self.announce.sys_name:
-                logger.warning('Another system is announcing the same IMC id ({})'.format(msg.sys_name))
+                logger.warning(f'Another system is announcing the same IMC id ({msg.sys_name})')
             return
 
         # Update announce
@@ -441,7 +446,7 @@ class IMCBase:
             # If the key is new, check for duplicate names/imc addresses
             key_imcadr = [x for x in self._nodes.keys() if x[0] == key[0] or x[1] == key[1]]
             if key_imcadr:
-                logger.warning('Multiple nodes are announcing the same IMC address or name: {} and {}'.format(key, key_imcadr))
+                logger.warning(f'Multiple nodes are announcing the same IMC address or name: {key} and {key_imcadr}')
 
             # New node
             self.add_node(IMCNode.from_announce(msg))
@@ -464,7 +469,7 @@ class IMCBase:
                 except NotImplementedError:
                     pass
         except (AmbiguousKeyError, KeyError):
-            logger.debug('Received heartbeat from unannounced node ({})'.format(msg.src))
+            logger.debug(f'Received heartbeat from unannounced node ({msg.src})')
 
     @Subscribe(imcpy.EntityList)
     def _recv_entity_list(self, msg):
@@ -493,4 +498,3 @@ class IMCBase:
 
 if __name__ == '__main__':
     pass
-

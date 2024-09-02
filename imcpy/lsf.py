@@ -2,18 +2,19 @@
 Functionality related to the DUNE lsf logs.
 """
 
-import io
-from io import BytesIO
-import os
-import logging
 import ctypes
-import imcpy
-import pickle
-import heapq
 import gzip
-import warnings
-from typing import List, Dict, Union, Iterable, Type, Tuple
+import heapq
 import inspect
+import io
+import logging
+import os
+import pickle
+import warnings
+from io import BytesIO
+from typing import Dict, Iterable, List, Optional, Tuple, Type, Union
+
+import imcpy
 
 try:
     import pandas as pd
@@ -30,22 +31,20 @@ logger = logging.getLogger('imcpy.lsf')
 class IMCHeader(ctypes.LittleEndianStructure):
     _pack_ = 1
     _fields_ = [
-       ('sync', ctypes.c_uint16),
-       ('mgid', ctypes.c_uint16),
-       ('size', ctypes.c_uint16),
-       ('timestamp', ctypes.c_double),
-       ('src', ctypes.c_uint16),
-       ('src_ent', ctypes.c_uint8),
-       ('dst', ctypes.c_uint16),
-       ('dst_ent', ctypes.c_uint8)
+        ('sync', ctypes.c_uint16),
+        ('mgid', ctypes.c_uint16),
+        ('size', ctypes.c_uint16),
+        ('timestamp', ctypes.c_double),
+        ('src', ctypes.c_uint16),
+        ('src_ent', ctypes.c_uint8),
+        ('dst', ctypes.c_uint16),
+        ('dst_ent', ctypes.c_uint8),
     ]
 
 
 class IMCFooter(ctypes.LittleEndianStructure):
     _pack_ = 1
-    _fields_ = [
-       ('crc16', ctypes.c_uint16)
-    ]
+    _fields_ = [('crc16', ctypes.c_uint16)]
 
 
 class LSFReader:
@@ -56,8 +55,11 @@ class LSFReader:
 
     Must either be used through the one-off static method or using 'with LSFReader(..) as x:'
     """
+
     @staticmethod
-    def read(lsf: Union[str, bytes], types: List[Type[imcpy.Message]] = None, use_index=True, save_index=True):
+    def read(
+        lsf: Union[str, bytes], types: Optional[List[Type[imcpy.Message]]] = None, use_index=True, save_index=True
+    ):
         """
         Read all messages of the specified type(s)
         :param lsf: The path to an LSF-file on the filesystem, or an in-memory lsf-file (bytes)
@@ -79,9 +81,9 @@ class LSFReader:
         :param save_index: If true, the generated index is saved to a imcpy_idx file
         """
         self.lsf = lsf
-        self.f = None  # type: io.BufferedIOBase
+        self.f: Optional[io.BufferedIOBase] = None
         self.header = IMCHeader()  # Preallocate header buffer
-        self.idx = {}  # type: Dict[Union[int, str], List[int]]
+        self.idx: Dict[Union[int, str], List[int]] = {}
         self.use_index = use_index
         self.save_index = save_index
 
@@ -191,7 +193,7 @@ class LSFReader:
         return len(self.idx[imcpy.Factory.id_from_abbrev(msg_type.__name__)])
 
     def count_messages(self):
-        """ Returns a dictionary of all message types with their counts """
+        """Returns a dictionary of all message types with their counts"""
         return {type(imcpy.Factory.produce(k)): len(v) for k, v in self.idx.items() if type(k) is int}
 
     def sorted_idx_iter(self, types: List[int]) -> Iterable[int]:
@@ -269,11 +271,11 @@ class LSFExporter:
         self.lsf_reader = LSFReader(lsf, use_index=use_index, save_index=save_index)
 
         # Metadata
-        self.log_name = None  # type: str
-        self.logging_system_id = None  # type: int
-        self.logging_system_name = None  # type: str
-        self.node_map = {}  # type: Dict[int, str]
-        self.entity_map = {}  # type: Dict[Tuple[int, int], str]
+        self.log_name: str = ''
+        self.logging_system_id: Optional[int] = None
+        self.logging_system_name: Optional[str] = None
+        self.node_map: Dict[int, str] = {}
+        self.entity_map: Dict[Tuple[int, int], str] = {}
         self.parse_metadata()
 
     def get_node_name(self, imc_id: int) -> str:
@@ -289,7 +291,7 @@ class LSFExporter:
         except KeyError:
             return hex(imc_id)
 
-    def get_node_id(self, sys_name: str) -> Union[int, type(None)]:
+    def get_node_id(self, sys_name: str) -> Optional[int]:
         """
         Retrieve the IMC id associated with an IMC system name.
         Note: the name is assumed to be unique
@@ -346,7 +348,8 @@ class LSFExporter:
 
             # Try to update logging system name
             try:
-                self.logging_system_name = self.node_map[self.logging_system_id]
+                if self.logging_system_id is not None:
+                    self.logging_system_name = self.node_map[self.logging_system_id]
             except KeyError:
                 pass
 
@@ -389,7 +392,9 @@ class LSFExporter:
 
         return d
 
-    def export_messages(self, imc_type: Type[imcpy.Message], skip_lists=False, skip_binary=False, condition=None) -> pd.DataFrame:
+    def export_messages(
+        self, imc_type: Type[imcpy.Message], skip_lists=False, skip_binary=False, condition=None
+    ) -> pd.DataFrame:
         """
         Export the messages of the target imc type from the LSF file as a pandas.DataFrame
         :param imc_type: The imcpy type of the target message (e.g. imcpy.EstimatedState)
@@ -408,8 +413,13 @@ class LSFExporter:
                 if condition is not None and not condition(msg):
                     continue
 
-                msg_data = [msg.timestamp, self.get_node_name(msg.src), self.get_entity(msg.src, msg.src_ent),
-                            self.get_node_name(msg.dst), self.get_entity(msg.dst_ent, msg.dst_ent)]
+                msg_data = [
+                    msg.timestamp,
+                    self.get_node_name(msg.src),
+                    self.get_entity(msg.src, msg.src_ent),
+                    self.get_node_name(msg.dst),
+                    self.get_entity(msg.dst_ent, msg.dst_ent),
+                ]
 
                 msg_data.extend(self.extract_fields(msg, msg_fields, skip_lists, skip_binary))
 
@@ -418,7 +428,7 @@ class LSFExporter:
 
                 data.append(msg_data)
 
-            df = pd.DataFrame(data=data, columns=base_fields+msg_fields)
+            df = pd.DataFrame(data=data, columns=base_fields + msg_fields)
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
 
             # Convert estate local frame to lat/lon
@@ -437,7 +447,7 @@ class LSFExporter:
                         pass
                     else:
                         cat_rev = {int(v): k for k, v in val.__members__.items()}
-                        cat_str = [cat_rev[v] if v in cat_rev else 'UNKNOWN' for v in range(max(cat_rev.keys())+1)]
+                        cat_str = [cat_rev[v] if v in cat_rev else 'UNKNOWN' for v in range(max(cat_rev.keys()) + 1)]
                         df[field_name] = pd.Categorical.from_codes(df[field_name].values, cat_str)
 
             return df

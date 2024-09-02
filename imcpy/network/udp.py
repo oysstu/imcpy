@@ -43,9 +43,7 @@ class IMCSenderUDP:
                 # Send one message per interface
                 interfaces = get_interfaces(ignore_local=False, only_ipv4=True)
                 for interface in interfaces:
-                    self.sock.setsockopt(socket.IPPROTO_IP,
-                                         socket.IP_MULTICAST_IF,
-                                         socket.inet_aton(interface[1]))
+                    self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(interface[1]))
                     self.sock.sendto(b, (self.dst, port))
             else:
                 # Send on default route

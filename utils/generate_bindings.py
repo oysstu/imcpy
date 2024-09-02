@@ -4,7 +4,6 @@ import string
 
 from .imc_schema import IMC
 
-
 # C++ template code for InlineMessage fields
 inline_message_template = """
 v{message}.def_property("{field}", 
@@ -52,6 +51,7 @@ class IMCPybind(IMC):
     """
     Generates python bindings for DUNE+IMC using pybind11.
     """
+
     common_include = ['pybind11/pybind11.h', 'pybind11/stl_bind.h']
     common_namespace = ['namespace py = pybind11;', 'using namespace DUNE::IMC;']
 
@@ -161,10 +161,12 @@ class IMCPybind(IMC):
             if self.whitelist and m.abbrev.lower() not in self.whitelist:
                 continue
 
-            include = self.common_include + ['DUNE/IMC/Message.hpp',
-                                             'DUNE/IMC/SuperTypes.hpp',
-                                             'DUNE/IMC/Definitions.hpp',
-                                             'DUNE/IMC/Enumerations.hpp']
+            include = self.common_include + [
+                'DUNE/IMC/Message.hpp',
+                'DUNE/IMC/SuperTypes.hpp',
+                'DUNE/IMC/Definitions.hpp',
+                'DUNE/IMC/Enumerations.hpp',
+            ]
             s = ['#include <{}>'.format(x) for x in include]
             s.append('#include "../pbUtils.hpp"')
             s.append('#include "../pbPacket.hpp"')
@@ -185,9 +187,9 @@ class IMCPybind(IMC):
                     s.extend(['\t' + x for x in plaintext.splitlines()])
                 elif f.type == 'message':
                     inline_type = f.message_type if f.message_type else 'Message'
-                    inline_message = inline_message_template.format(message=m.abbrev,
-                                                                    field=f.abbrev.lower(),
-                                                                    inline_type=inline_type)
+                    inline_message = inline_message_template.format(
+                        message=m.abbrev, field=f.abbrev.lower(), inline_type=inline_type
+                    )
                     s.extend(['\t' + x for x in inline_message.splitlines()])
                 elif f.is_enum():
                     if f.is_inline_enum():
@@ -195,18 +197,18 @@ class IMCPybind(IMC):
                     else:
                         cppname = f.enum_def
 
-                    enum_field = enumfield_template.format(message=m.abbrev,
-                                                           field=f.abbrev.lower(),
-                                                           enum_ctype=f.type,
-                                                           enum=cppname,
-                                                           description='')
+                    enum_field = enumfield_template.format(
+                        message=m.abbrev, field=f.abbrev.lower(), enum_ctype=f.type, enum=cppname, description=''
+                    )
 
                     s.extend(['\t' + x for x in enum_field.splitlines()])
                 else:
                     s.append('\tv{0}.def_readwrite("{1}", &{0}::{1});'.format(m.abbrev, f.abbrev.lower()))
 
             # Inline enums/bitfields
-            enum_fields = [f for f in m.fields if f.is_inline_enum() and (f.unit == 'Enumerated' or f.unit == 'Bitfield')]
+            enum_fields = [
+                f for f in m.fields if f.is_inline_enum() and (f.unit == 'Enumerated' or f.unit == 'Bitfield')
+            ]
             for f in enum_fields:
                 e = f.get_inline_enum()
                 arit = ', py::arithmetic()' if e.is_bitfield() else ''
@@ -217,11 +219,15 @@ class IMCPybind(IMC):
                 if pyname[0].isdigit():
                     pyname = '_' + pyname
                 cppname = e.name.replace(' ', '') + ('Bits' if e.is_bitfield() else 'Enum')
-                s.append('\n\tpy::enum_<{0}::{1}>(v{0}, "{2}", "{3}"{4})'.format(m.abbrev, cppname, pyname, e.name, arit))
+                s.append(
+                    '\n\tpy::enum_<{0}::{1}>(v{0}, "{2}", "{3}"{4})'.format(m.abbrev, cppname, pyname, e.name, arit)
+                )
                 for v in e.values:
                     # Fields starting with digits is invalid in Python, prepend underscore
                     pyval = '_' + v.abbrev if v.abbrev[0].isdigit() else v.abbrev
-                    s.append('\t\t.value("{0}", {1}::{2}::{3}_{4})'.format(pyval, m.abbrev, cppname, e.prefix, v.abbrev))
+                    s.append(
+                        '\t\t.value("{0}", {1}::{2}::{3}_{4})'.format(pyval, m.abbrev, cppname, e.prefix, v.abbrev)
+                    )
                 s[-1] = s[-1] + ';'
 
             s.append('}')
@@ -251,7 +257,7 @@ class IMCPybind(IMC):
         # Write forward declarations
         fnames = ['Enumerations', 'SuperTypes', 'Bitfields']
         fnames += [m.abbrev for m in self.messages if not self.whitelist or m.abbrev.lower() in self.whitelist]
-        s.extend(['void pb{}(py::module&);'.format(x) for x in fnames])
+        s.extend([f'void pb{fname}(py::module&);' for fname in fnames])
 
         # Entry point
         s.append('\nvoid pbGenerated(py::module &m) {')
@@ -260,14 +266,17 @@ class IMCPybind(IMC):
         msglst = [x.message_type for y in self.messages for x in y.fields if x.message_type]
         msglst.append('Message')
         msglst = set(msglst)  # Unique entries
-        s.extend(['\tpbMessageList<{0}>(m);'.format(ml) for ml in msglst])
+        s.extend([f'\tpbMessageList<{ml}>(m);' for ml in msglst])
 
         s.append('')
 
         # Bind std::vector opaque types to Python name
         for vec_type in vec_types:
-            s.append('\tpy::bind_vector<std::vector<{}>> (m, "{}", py::buffer_protocol());'
-                     .format(vec_type, IMCPybind.imctype_vec[vec_type]))
+            s.append(
+                '\tpy::bind_vector<std::vector<{}>> (m, "{}", py::buffer_protocol());'.format(
+                    vec_type, IMCPybind.imctype_vec[vec_type]
+                )
+            )
 
         s.append('')
 
@@ -284,6 +293,7 @@ class IMCPyi(IMC):
     """
     Generates python type hinting (pyi) for DUNE+IMC bindings
     """
+
     # Mapping between IMC type and pure python type
     imctype_pyi = {
         'int8_t': 'int',
@@ -300,7 +310,7 @@ class IMCPyi(IMC):
         'plaintext': 'str',
         'vector': 'List',
         'message': 'Message',
-        'message-list': 'MessageList'
+        'message-list': 'MessageList',
     }
 
     def __init__(self, imc_path, whitelist=None):
@@ -326,7 +336,7 @@ class IMCPyi(IMC):
         Generate the message supertypes
         """
         for abbrev, children in self.message_groups:
-            self.s.append('class {0}(Message):'.format(abbrev, abbrev))
+            self.s.append(f'class {abbrev}(Message):')
             self.s.append('\tpass\n')
 
     def write_enumerations(self):
@@ -336,9 +346,9 @@ class IMCPyi(IMC):
         for e in self.enumerations:
             if e.abbrev == 'Boolean':
                 continue
-            self.s.append('class {0}:'.format(e.abbrev))
+            self.s.append('class {e.abbrev}:')
             for v in e.values:
-                self.s.append('\t{0} = None  # type: int'.format(v.abbrev))
+                self.s.append(f'\t{v.abbrev}: int = {v.id}')
             self.s.append('')
 
     def write_bitfields(self):
@@ -346,10 +356,10 @@ class IMCPyi(IMC):
         Generate the global bitfields
         """
         for e in self.bitfields:
-            self.s.append('class {0}:'.format(e.abbrev))
+            self.s.append(f'class {e.abbrev}:')
 
             for v in e.values:
-                self.s.append('\t{0} = None  # type: int'.format(v.abbrev))
+                self.s.append('\t{v.abbrev}: int = {v.id}')
             self.s.append('')
 
     def write_messages(self):
@@ -357,7 +367,7 @@ class IMCPyi(IMC):
             if self.whitelist and m.abbrev.lower() not in self.whitelist:
                 continue
 
-            self.s.append('class {0}({1}):'.format(m.abbrev, m.parent, m.name))
+            self.s.append(f'class {m.abbrev}({m.parent}):')
 
             # Members
             for f in m.fields:
@@ -369,7 +379,7 @@ class IMCPyi(IMC):
                     self.s.append('\t@{}.setter'.format(fabbr))
                     self.s.append('\tdef {0}(self, {0}: {1}) -> None: ...'.format(fabbr, inline_type))
                 elif f.type == 'message-list':
-                    inline_type = f.message_type
+                    inline_type = f.message_type if f.message_type is not None else 'imcpy.Message'
                     self.s.append('\tdef {0}(self) -> MessageList[{1}]: ...'.format(fabbr, inline_type))
                     self.s.append('\t@{}.setter'.format(fabbr))
                     self.s.append('\tdef {0}(self, {0}: MessageList[{1}]) -> None: ...'.format(fabbr, inline_type))
@@ -395,7 +405,7 @@ class IMCPyi(IMC):
                 for v in e.values:
                     # Fields starting with digits is invalid in Python, prepend underscore
                     pyval = '_' + v.abbrev if v.abbrev[0].isdigit() else v.abbrev
-                    self.s.append('\t\t{0} = None'.format(pyval))
+                    self.s.append(f'\t\t{pyval} = {v.id}')
 
             if not m.fields and not enum_fields:
                 self.s.append('\tpass')
@@ -406,8 +416,13 @@ class IMCPyi(IMC):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate IMC pybind11 wrapper code.')
     parser.add_argument('--imc_path', type=str, required=True, help='Path to the IMC XML specification.')
-    parser.add_argument('--whitelist', type=str, required=False, default=None,
-                        help='Path to a text file with messages to keep (optional).')
+    parser.add_argument(
+        '--whitelist',
+        type=str,
+        required=False,
+        default=None,
+        help='Path to a text file with messages to keep (optional).',
+    )
     args = parser.parse_args()
 
     whitelist = []
@@ -424,8 +439,3 @@ if __name__ == '__main__':
 
     pyi = IMCPyi(args.imc_path, whitelist=whitelist)
     pyi.write_pyi()
-
-
-
-
-

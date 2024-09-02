@@ -1,8 +1,11 @@
-import logging, math, sys
+import logging
+import math
+import sys
 
 import imcpy
+import imcpy.coordinates
 from imcpy.actors import DynamicActor
-from imcpy.decorators import Subscribe, Periodic
+from imcpy.decorators import Periodic, Subscribe
 
 logger = logging.getLogger('examples.FollowRef')
 
@@ -16,7 +19,12 @@ class FollowRef(DynamicActor):
         self.lat = 0.0
         self.lon = 0.0
         self.last_ref = False
-        self.wp = [(50., 0.), (0.0, 50.), (-50, 0.), (0., -50.)]  # North/east offsets for waypoints
+        self.wp = [
+            (50.0, 0.0),
+            (0.0, 50.0),
+            (-50, 0.0),
+            (0.0, -50.0),
+        ]  # North/east offsets for waypoints
         self.wp_next = 0
 
     def send_reference(self, node_id, final=False):
@@ -126,7 +134,11 @@ class FollowRef(DynamicActor):
                 # Near XY - send next reference
                 logger.info('-- Near XY')
                 self.send_reference(node_id=self.target)
-        elif msg.state in (imcpy.FollowRefState.StateEnum.LOITER, imcpy.FollowRefState.StateEnum.HOVER, imcpy.FollowRefState.StateEnum.WAIT):
+        elif msg.state in (
+            imcpy.FollowRefState.StateEnum.LOITER,
+            imcpy.FollowRefState.StateEnum.HOVER,
+            imcpy.FollowRefState.StateEnum.WAIT,
+        ):
             # Loitering/hovering/waiting - send next reference
             logger.info('Waiting')
             self.send_reference(node_id=self.target)
@@ -145,6 +157,7 @@ class FollowRef(DynamicActor):
             except KeyError:
                 pass
 
+
 if __name__ == '__main__':
     # Setup logging level and console output
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -152,4 +165,3 @@ if __name__ == '__main__':
     # Run actor
     x = FollowRef('lauv-simulator-1')
     x.run()
-

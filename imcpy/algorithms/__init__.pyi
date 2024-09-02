@@ -1,8 +1,9 @@
-import imcpy
 from typing import Tuple
 
+import imcpy
+
 class CRC8:
-    def __init__(self, polynomial, value = 0):
+    def __init__(self, polynomial, value=0):
         """
         Generic computation of 8-bit CRCs.
         :param polynomial: CRC poly
@@ -42,4 +43,3 @@ class CRC8:
         :return: The CRC8 value after processing the bytes
         """
         ...
-

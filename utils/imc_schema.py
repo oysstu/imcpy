@@ -2,8 +2,8 @@
 Parser for the IMC.xml specification file.
 """
 
+from typing import List, Optional
 from xml.etree import ElementTree as ET
-from typing import List
 
 # Mapping between IMC type and size
 imctype_sz = {
@@ -22,7 +22,7 @@ imctype_sz = {
     'plaintext': 2,
     'vector': 2,
     'message': 2,
-    'message-list': 2
+    'message-list': 2,
 }
 
 # IMC types that can vary in size
@@ -33,20 +33,21 @@ class IMC:
     """
     Representation of an entire IMC definition (xml file)
     """
+
     def __init__(self, imc_path):
         self.name = None
         self.long_name = None
         self.version = None
         self.description = None
-        self.header = None  # type: IMCHeader
-        self.footer = None  # type: IMCFooter
-        self.groups = []  # type: List[IMCGroup]
-        self.messages = []  # type: List[IMCMessage]
+        self.header: Optional[IMCHeader] = None
+        self.footer: Optional[IMCFooter] = None
+        self.groups: List[IMCGroup] = []
+        self.messages: List[IMCMessage] = []
         self.types = []
         self.serialization = []
         self.units = {}
-        self.enumerations = []  # type: List[IMCEnum]
-        self.bitfields = []  # type: List[IMCEnum]
+        self.enumerations: List[IMCEnum] = []
+        self.bitfields: List[IMCEnum] = []
         self.message_groups = []
         self.flags = []
 
@@ -92,7 +93,8 @@ class IMC:
             elif tag == 'message-groups':
                 for group in child.findall('message-group'):
                     self.message_groups.append(
-                        (group.attrib['abbrev'], [x.attrib['abbrev'] for x in group.findall('message-type')]))
+                        (group.attrib['abbrev'], [x.attrib['abbrev'] for x in group.findall('message-type')])
+                    )
             elif tag == 'flags':
                 self.flags = [(x.attrib['name'], x.attrib['abbrev']) for x in child.findall('flag')]
             elif tag == 'header':
@@ -148,6 +150,7 @@ class IMCGroup:
     """
     Defines a division of the declared IMC IDs into a predefined range (e.g sensors 250-299)
     """
+
     def __init__(self, el=None):
         if el:
             self.name = el.attrib['name']
@@ -164,13 +167,14 @@ class IMCMessage:
     """
     The definition of an IMC message. Can contain one or multiple values
     """
+
     def __init__(self, el):
         self.id = el.attrib['id']
         self.name = el.attrib['name']
         self.abbrev = el.attrib['abbrev']
         self.source = el.attrib.get('source', None)
         self.description = '\n'.join([x.text for x in el.findall('description') if x])
-        self.fields = [IMCField(x) for x in el.findall('field')]  # type: List[IMCField]
+        self.fields = [IMCField(x) for x in el.findall('field')]
         self.flags = el.attrib.get('flags', None)
         self.used_by = el.attrib.get('used-by', None)
         self.parent = 'Message'  # Default parent class
@@ -183,24 +187,27 @@ class IMCHeader:
     """
     Header which is present for all messages (e.g dst/src addresses)
     """
+
     def __init__(self, el):
         self.description = '\n'.join([x.text for x in el.findall('description')])
-        self.fields = [IMCField(x) for x in el.findall('field')]  # type: List[IMCField]
+        self.fields = [IMCField(x) for x in el.findall('field')]
 
 
 class IMCFooter:
     """
     Footer which is present for all messages (e.g checksum)
     """
+
     def __init__(self, el):
         self.description = '\n'.join([x.text for x in el.findall('description')])
-        self.fields = [IMCField(x) for x in el.findall('field')]  # type: List[IMCField]
+        self.fields = [IMCField(x) for x in el.findall('field')]
 
 
 class IMCField:
     """
     A field contains a value or enumeration/bitfield
     """
+
     def __init__(self, el):
         self.name = el.attrib['name']
         self.abbrev = el.attrib['abbrev']
@@ -275,6 +282,7 @@ class IMCEnum:
     """
     Represents a declaration of an enumeration or bitfield
     """
+
     def __init__(self, el=None):
         self.is_inline = False
 
@@ -284,7 +292,7 @@ class IMCEnum:
             self.prefix = el.attrib['prefix']
             self.unit = el.attrib.get('unit', None)
             self.type = el.attrib.get('type', None)
-            self.values = [IMCValue(x) for x in el.findall('value')]  # type: List[IMCValue]
+            self.values = [IMCValue(x) for x in el.findall('value')]
 
     def is_bitfield(self):
         if self.unit:
@@ -295,14 +303,15 @@ class IMCValue:
     """
     Denotes a possible value an enumeration or bitfield can take.
     """
+
     def __init__(self, el):
         self.abbrev = el.attrib['abbrev']  # Abbreviation
         self.name = el.attrib['name']  # Full name
         self.id = el.attrib['id']  # The assosciated value, integer in hex or dec
 
         # Avoid leading digits in abbrev
-        #if str.isdigit(self.abbrev[0]):
-            #self.abbrev = '_' + self.abbrev
+        # if str.isdigit(self.abbrev[0]):
+        # self.abbrev = '_' + self.abbrev
 
     def __repr__(self):
         return 'IMCValue({}, {})'.format(self.id, self.abbrev)

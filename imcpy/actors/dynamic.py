@@ -1,13 +1,13 @@
 import logging
-from operator import itemgetter
 import socket
 import time
+from operator import itemgetter
+from typing import List, Tuple, Union
 
 import imcpy
 from imcpy.actors import IMCBase
 from imcpy.common import multicast_ip
-from imcpy.decorators import Periodic
-from imcpy.decorators import Subscribe
+from imcpy.decorators import Periodic, Subscribe
 from imcpy.exception import AmbiguousKeyError
 from imcpy.network.udp import IMCSenderUDP
 from imcpy.network.utils import get_interfaces
@@ -19,22 +19,15 @@ class DynamicActor(IMCBase):
     """
     Actor which announces itself and maintains communication (heartbeat) with a set of specified nodes.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # Set initial announce details
-        self.announce = imcpy.Announce()
-        self.announce.src = self.imc_id  # imcjava uses 0x3333
-        self.announce.sys_name = 'ccu-imcpy-{}'.format(socket.gethostname().lower())
-        self.announce.sys_type = imcpy.SystemType.CCU
-        self.announce.owner = 0xFFFF
-        self.announce.src_ent = 1
 
         # Set initial entities (services generated on first announce)
         self.entities = {'Daemon': 0, 'Service Announcer': 1}
 
         # IMC nodes to send heartbeat signal to (maintaining comms)
-        self.heartbeat = []  # type: List[Union[str, int, Tuple[int, str]]]
+        self.heartbeat: List[Union[str, int, Tuple[int, str]]] = []
 
     @Subscribe(imcpy.EntityList)
     def _reply_entity_list(self, msg):

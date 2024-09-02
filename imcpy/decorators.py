@@ -1,11 +1,11 @@
 """
-This file declares the decorators which provides a simple API 
+This file declares the decorators which provides a simple API
 for subscribing to certain messages or perform periodic tasks through the same event loop.
 """
 
 import asyncio
-import sys
 import inspect
+import sys
 import time
 from typing import Dict, List, Tuple, Type, Union
 
@@ -14,16 +14,19 @@ class IMCDecoratorBase:
     """
     Base class for imcpy decorators
     """
+
     def add_event(self, loop, instance, fn):
         """
         Add event to the asyncio event loop
         """
         return asyncio.ensure_future(fn, loop=loop)
 
+
 class Periodic(IMCDecoratorBase):
     """
     Calls the decorated function every N seconds
     """
+
     def __init__(self, dt: Union[int, float]):
         self.dt = dt
 
@@ -69,6 +72,7 @@ class Subscribe(IMCDecoratorBase):
     Subscribes to the specified IMC Messages.
     Multiple types can be specified (e.g @Subscribe(imcpy.CpuUsage, imcpy.Heartbeat)
     """
+
     def __init__(self, *args, **kwargs):
         for arg in args:
             if arg.__module__ == '_imcpy':
@@ -111,6 +115,7 @@ class RunOnce(IMCDecoratorBase):
     Calls the decorated function once after start, at an optional time delay
     This can e.g. be used with coroutines to implement periodic functions with variable wait
     """
+
     def __init__(self, delay: float = 0.0):
         self.delay = delay
 
