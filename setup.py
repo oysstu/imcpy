@@ -151,7 +151,7 @@ if __name__ == '__main__':
             'Intended Audience :: Science/Research',
             'Topic :: Scientific/Engineering',
         ],
-        packages=['imcpy', 'imcpy.actors', 'imcpy.algorithms', 'imcpy.coordinates', 'imcpy.network', 'utils'],
+        packages=['imcpy', 'imcpy.actors', 'imcpy.algorithms', 'imcpy.coordinates', 'imcpy.network'],
         python_requires='>=3.6',
         install_requires=['ifaddr'],
         extras_require={'LSFExporter': ['pandas']},
