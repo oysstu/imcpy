@@ -6,4 +6,6 @@ graft imc
 graft src
 graft imcpy
 graft utils
+include setup.py
+include pyproject.toml
 global-include CMakeLists.txt *.cmake

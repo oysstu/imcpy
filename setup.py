@@ -4,9 +4,13 @@ import platform
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
+
+SETUP_DIR = Path(__file__).parent
+sys.path.append(str(SETUP_DIR))
 
 from utils.generate_bindings import IMCPybind, IMCPyi
 
@@ -123,7 +127,7 @@ class CMakeBuild(build_ext):
 
 
 if __name__ == '__main__':
-    with open("README.md", "r", encoding="utf-8") as fh:
+    with open('README.md', 'r', encoding='utf-8') as fh:
         long_description = fh.read()
 
     setup(
@@ -134,33 +138,26 @@ if __name__ == '__main__':
         description='Python bindings for DUNE-IMC',
         long_description=long_description,
         long_description_content_type='text/markdown',
-        url="https://github.com/oysstu/imcpy",
+        url='https://github.com/oysstu/imcpy',
         project_urls={
-            "Bug Tracker": "https://github.com/oysstu/imcpy/issues",
+            'Bug Tracker': 'https://github.com/oysstu/imcpy/issues',
         },
         license='MIT',
         classifiers=[
-            "Programming Language :: Python :: 3",
-            "License :: OSI Approved :: MIT License",
+            'Programming Language :: Python :: 3',
+            'License :: OSI Approved :: MIT License',
             'Intended Audience :: Developers',
             'Intended Audience :: Other Audience',
             'Intended Audience :: Science/Research',
             'Topic :: Scientific/Engineering',
         ],
-        packages=['imcpy',
-                  'imcpy.actors',
-                  'imcpy.algorithms',
-                  'imcpy.coordinates',
-                  'imcpy.network',
-                  'utils'],
+        packages=['imcpy', 'imcpy.actors', 'imcpy.algorithms', 'imcpy.coordinates', 'imcpy.network', 'utils'],
         python_requires='>=3.6',
         install_requires=['ifaddr'],
         extras_require={'LSFExporter': ['pandas']},
-        package_data={'': ['_imcpy.pyi'],
-                      'imcpy.coordinates': ['*.pyi'],
-                      'imcpy.algorithms': ['*.pyi']},
+        package_data={'': ['_imcpy.pyi'], 'imcpy.coordinates': ['*.pyi'], 'imcpy.algorithms': ['*.pyi']},
         include_package_data=True,
         ext_modules=[CMakeExtension('_imcpy')],
         cmdclass=dict(build_ext=CMakeBuild),
-        zip_safe=False
+        zip_safe=False,
     )
