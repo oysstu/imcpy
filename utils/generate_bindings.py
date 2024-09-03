@@ -6,14 +6,14 @@ from .imc_schema import IMC
 
 # C++ template code for InlineMessage fields
 inline_message_template = """
-v{message}.def_property("{field}", 
-[](const {message} &x){{return x.{field}.isNull() ? nullptr : x.{field}.get();}}, 
+v{message}.def_property("{field}",
+[](const {message} &x){{return x.{field}.isNull() ? nullptr : x.{field}.get();}},
 []({message} *x, const py::handle &y){{
     if(y.is_none()){{
         x->{field}.clear();
     }} else {{
         try {{
-            x->{field}.set(y.cast<{inline_type}*>()); 
+            x->{field}.set(y.cast<{inline_type}*>());
         }}
         catch(const py::cast_error &e){{
             PyErr_Clear();
@@ -99,8 +99,8 @@ class IMCPybind(IMC):
         """
         Generate the message supertypes bindings
         """
-        include = self.common_include + ['DUNE/IMC/SuperTypes.hpp']
-        s = ['#include <{}>'.format(x) for x in include]
+        includes = self.common_include + ['DUNE/IMC/SuperTypes.hpp']
+        s = [f'#include <{include}>' for include in includes]
         s += self.common_namespace
 
         s.append('\nvoid pbSuperTypes(py::module &m) {')
@@ -116,8 +116,8 @@ class IMCPybind(IMC):
         """
         Generate the global enumerations
         """
-        include = self.common_include + ['DUNE/IMC/Enumerations.hpp']
-        s = ['#include <{}>'.format(x) for x in include]
+        includes = self.common_include + ['DUNE/IMC/Enumerations.hpp']
+        s = [f'#include <{include}>' for include in includes]
         s += self.common_namespace
         s.append('\nvoid pbEnumerations(py::module &m) {')
 
@@ -139,8 +139,8 @@ class IMCPybind(IMC):
         """
         Generate the global bitfields
         """
-        include = self.common_include + ['DUNE/IMC/Bitfields.hpp']
-        s = ['#include <{}>'.format(x) for x in include]
+        includes = self.common_include + ['DUNE/IMC/Bitfields.hpp']
+        s = [f'#include <{include}>' for include in includes]
         s += self.common_namespace
         s.append('\nvoid pbBitfields(py::module &m) {')
 
@@ -161,13 +161,13 @@ class IMCPybind(IMC):
             if self.whitelist and m.abbrev.lower() not in self.whitelist:
                 continue
 
-            include = self.common_include + [
+            includes = self.common_include + [
                 'DUNE/IMC/Message.hpp',
                 'DUNE/IMC/SuperTypes.hpp',
                 'DUNE/IMC/Definitions.hpp',
                 'DUNE/IMC/Enumerations.hpp',
             ]
-            s = ['#include <{}>'.format(x) for x in include]
+            s = [f'#include <{include}>' for include in includes]
             s.append('#include "../pbUtils.hpp"')
             s.append('#include "../pbPacket.hpp"')
             s += self.common_namespace
@@ -240,9 +240,9 @@ class IMCPybind(IMC):
         """
         Generate a single point of entry for pybind for all generated bindings
         """
-        include = self.common_include + ['DUNE/IMC/Definitions.hpp']
+        includes = self.common_include + ['DUNE/IMC/Definitions.hpp']
         s = ['#pragma once']
-        s += ['#include <{}>'.format(x) for x in include]
+        s += [f'#include <{include}>' for include in includes]
         s.append('#include "../pbMessageList.hpp"')
         s += self.common_namespace
         s.append('')
@@ -346,7 +346,7 @@ class IMCPyi(IMC):
         for e in self.enumerations:
             if e.abbrev == 'Boolean':
                 continue
-            self.s.append('class {e.abbrev}:')
+            self.s.append(f'class {e.abbrev}:')
             for v in e.values:
                 self.s.append(f'\t{v.abbrev}: int = {v.id}')
             self.s.append('')
@@ -359,7 +359,7 @@ class IMCPyi(IMC):
             self.s.append(f'class {e.abbrev}:')
 
             for v in e.values:
-                self.s.append('\t{v.abbrev}: int = {v.id}')
+                self.s.append(f'\t{v.abbrev}: int = {v.id}')
             self.s.append('')
 
     def write_messages(self):
