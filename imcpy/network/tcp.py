@@ -13,13 +13,20 @@ class IMCProtocolTCPClientConnection:
         self.writer = writer
         self._parser = imcpy.Parser()
 
+    def is_closing(self):
+        return self.writer.is_closing()
+
     async def write_bytes(self, data: bytes):
         """Write the bytes to the connected clients and flush buffer if necessary.
 
         :param data: The serialized IMC message to write.
         """
-        self.writer.write(data)
-        await self.writer.drain()
+        try:
+            self.writer.write(data)
+            await self.writer.drain()
+        except ConnectionError as e:
+            logger.error(f'Connection error ({self.name}): {e}')
+            await self.close()
 
     async def close(self):
         self.writer.close()
@@ -56,11 +63,14 @@ class IMCProtocolTCPServer:
         self._clients = set()
 
     async def on_connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        logger.info(f'New connection from {writer.get_extra_info("peername")}')
-        client = IMCProtocolTCPClientConnection(writer.get_extra_info('peername'), reader, writer)
-        self._clients.add(client)
-        await client.handle_data(self.instance)
-        self._clients.remove(client)
+        try:
+            logger.info(f'New connection from {writer.get_extra_info("peername")}')
+            client = IMCProtocolTCPClientConnection(writer.get_extra_info('peername'), reader, writer)
+            self._clients.add(client)
+            await client.handle_data(self.instance)
+            self._clients.remove(client)
+        except Exception as e:
+            logger.error(f'Connnection terminated with error ({e})')
 
     async def write_message(self, msg: imcpy.Message):
         """Write message to all connected clients.
@@ -69,4 +79,5 @@ class IMCProtocolTCPServer:
         """
         b = msg.serialize()
         for client in self._clients:
-            await client.write_bytes(b)
+            if not client.is_closing():
+                await client.write_bytes(b)

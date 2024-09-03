@@ -328,6 +328,11 @@ class IMCBase:
             with IMCSenderUDP(svc.ip) as s:
                 s.send(message=msg, port=svc.port)
 
+    def send_backseat(self, msg, set_timestamp=True):
+        # Send to connected backseat (if any)
+        if self._backseat_server is not None and self._loop is not None:
+            asyncio.ensure_future(self._backseat_server.write_message(msg), loop=self._loop)
+
     def send(self, node_id, msg, set_timestamp=True):
         """
         Send an imc message to the specified imc node. The node can be specified through it's imc address, system name
@@ -351,8 +356,7 @@ class IMCBase:
         self.send_static(msg)
 
         # Send to connected backseat (if any)
-        if self._backseat_server is not None and self._loop is not None:
-            asyncio.ensure_future(self._backseat_server.write_message(msg), loop=self._loop)
+        self.send_backseat(msg)
 
     def on_exception(self, loc, exc):
         """
