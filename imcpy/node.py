@@ -135,7 +135,7 @@ class IMCNode:
     def update_entity_id(self, ent_id, ent_label):
         self.entities[ent_label] = ent_id
 
-    def send(self, msg, log_fh=None):
+    def send(self, msg, log_fh=None, ignore_local=True):
         """
         Sends the IMC message to the node, filling in the destination
         :param msg: The IMC message to send
@@ -157,7 +157,7 @@ class IMCNode:
         # Note: this might not account for funky ip routing
         networks = [
             ip.IPv4Network((addr, mask), strict=False)
-            for name, addr, mask in get_interfaces(ignore_local=True, only_ipv4=True)
+            for name, addr, mask in get_interfaces(ignore_local=ignore_local, only_ipv4=True)
         ]
         for svc in imcudp_services:
             svc_ip = ip.ip_address(svc.ip)

@@ -333,7 +333,7 @@ class IMCBase:
         if self._backseat_server is not None and self._loop is not None:
             asyncio.ensure_future(self._backseat_server.write_message(msg), loop=self._loop)
 
-    def send(self, node_id, msg, set_timestamp=True):
+    def send(self, node_id, msg, set_timestamp=True, ignore_local=True):
         """
         Send an imc message to the specified imc node. The node can be specified through it's imc address, system name
         or a tuple of both. If either of the first two does not uniquely specify a node an AmbiguousNode exception is
@@ -350,7 +350,7 @@ class IMCBase:
             msg.set_timestamp_now()
 
         node = self.resolve_node_id(node_id)
-        node.send(msg, log_fh=self.log_imc_fh)
+        node.send(msg, log_fh=self.log_imc_fh, ignore_local=ignore_local)
 
         # Send to static destinations
         self.send_static(msg)
