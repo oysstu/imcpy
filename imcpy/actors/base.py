@@ -68,7 +68,7 @@ class IMCBase:
         self._task_mc: Optional[asyncio.Task] = None
         self._task_imc: Optional[asyncio.Task] = None
         self._task_server: Optional[asyncio.Task] = None
-        self._server_backseat: Optional[IMCProtocolTCPServer] = None
+        self._backseat_server: Optional[IMCProtocolTCPServer] = None
         self._subs: Dict[Type[imcpy.Message], List[types.MethodType]] = {}
 
         # IMC/Multicast ports (assigned when socket is created)
