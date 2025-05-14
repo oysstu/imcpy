@@ -118,7 +118,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: cibw-cp${{ matrix.python }}-${{ matrix.os }}-${{ matrix.platform_id }}--${{ matrix.manylinux_image }}
+          name: cibw-cp${{ matrix.python }}-${{ matrix.os }}-${{ matrix.platform_id }}-${{ matrix.manylinux_image }}
           path: ./wheelhouse/*.whl
   upload_all:
     needs: [build_wheels, build_sdist]
