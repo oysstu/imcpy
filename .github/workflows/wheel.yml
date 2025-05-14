@@ -23,7 +23,7 @@ jobs:
 
     - uses: actions/upload-artifact@v4
       with:
-        name: imcpy-sdist
+        name: cibw-sdist
         path: dist/*.tar.gz
   build_wheels:
     strategy:
@@ -94,11 +94,10 @@ jobs:
 
     name: Build wheel for cp${{ matrix.python }}-${{ matrix.platform_id }}-${{ matrix.manylinux_image }}
     runs-on: ${{ matrix.os }}
-
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: 'true'
+          submodules: true
 
       # Used to host cibuildwheel
       - uses: actions/setup-python@v5
@@ -108,15 +107,18 @@ jobs:
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.23.3
+        with:
+          output-dir: wheelhouse
         env:
           CIBW_BUILD: cp${{ matrix.python }}-${{ matrix.platform_id }}
-          CIBW_ARCHS: all
+          CIBW_ARCHS: auto64
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
+          CIBW_MANYLINUX_AARCH64_IMAGE: ${{ matrix.manylinux_image }}
           CIBW_BUILD_VERBOSITY: 1
 
       - uses: actions/upload-artifact@v4
         with:
-          name: imcpy-cp${{ matrix.python }}-${{ matrix.platform_id }}-${{ matrix.manylinux_image }}
+          name: cibw-cp${{ matrix.python }}-${{ matrix.os }}-${{ matrix.platform_id }}--${{ matrix.manylinux_image }}
           path: ./wheelhouse/*.whl
   upload_all:
     needs: [build_wheels, build_sdist]
@@ -124,7 +126,11 @@ jobs:
     if: (github.event_name == 'release' && github.event.action == 'published') || github.event_name == 'workflow_dispatch'
     steps:
     - uses: actions/download-artifact@v4
-    - uses: pypa/gh-action-pypi-publish@v1.12.4
+      with:
+        pattern: cibw-*
+        path: dist
+        merge-multiple: true
+    - uses: pypa/gh-action-pypi-publish@release/v1
       with:
         user: __token__
         password: ${{ secrets.pypi_password }}
