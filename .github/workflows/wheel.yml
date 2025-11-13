@@ -106,7 +106,7 @@ jobs:
         run: python -m pip install cibuildwheel==2.23.2
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.2.0
+        uses: pypa/cibuildwheel@v3.3.0
         with:
           output-dir: wheelhouse
         env:
