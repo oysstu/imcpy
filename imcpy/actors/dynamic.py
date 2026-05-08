@@ -1,5 +1,4 @@
 import logging
-import socket
 import time
 from operator import itemgetter
 from typing import List, Tuple, Union
@@ -28,6 +27,20 @@ class DynamicActor(IMCBase):
 
         # IMC nodes to send heartbeat signal to (maintaining comms)
         self.heartbeat: List[Union[str, int, Tuple[int, str]]] = []
+
+        # Override IMC services to announce (empty: will use default IMC+UDP services)
+        self.services: List[str] = []
+
+    def default_imc_services(self, ignore_local=True) -> List[str]:
+        if self._port_imc:
+            srv = ['imc+udp://{}:{}/'.format(adr[1], self._port_imc) for adr in get_interfaces(ignore_local)]
+            if not srv:
+                # No external interfaces available, announce localhost/loopback
+                srv = ['imc+udp://{}:{}/'.format(adr[1], self._port_imc) for adr in get_interfaces(False)]
+            return srv
+        else:
+            logger.debug('IMC socket not ready')
+            return []
 
     @Subscribe(imcpy.EntityList)
     def _reply_entity_list(self, msg):
@@ -65,21 +78,12 @@ class DynamicActor(IMCBase):
         Send an announce. Will use properties stored in this class (e.g self.lat, self.lon to set parameters)
         :return:
         """
-        # Build imc+udp string
-        # TODO: Add TCP protocol for IMC
-        if self._port_imc:  # Port must be ready to build IMC service string
-            self.services = ['imc+udp://{}:{}/'.format(adr[1], self._port_imc) for adr in get_interfaces()]
-            if not self.services:
-                # No external interfaces available, announce localhost/loopback
-                self.services = ['imc+udp://{}:{}/'.format(adr[1], self._port_imc) for adr in get_interfaces(False)]
-
-            self.announce.services = ';'.join(self.services)
-            with IMCSenderUDP(multicast_ip, local_port=None, all_interfaces=True) as s:
-                self.announce.set_timestamp_now()
-                for i in range(30100, 30105):
-                    s.send(self.announce, i)
-        elif (time.time() - self.t_start) > 10:
-            logger.debug('IMC socket not ready')  # Socket should be ready by now.
+        services = self.services if self.services else self.default_imc_services()
+        self.announce.services = ';'.join(services)
+        with IMCSenderUDP(multicast_ip, local_port=None, all_interfaces=True) as s:
+            self.announce.set_timestamp_now()
+            for i in range(30100, 30105):
+                s.send(self.announce, i)
 
     @Periodic(1)
     def _send_heartbeat(self):
