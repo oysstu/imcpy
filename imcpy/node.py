@@ -4,6 +4,7 @@ import time
 from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
+from imcpy import Message
 from imcpy.network.udp import IMCSenderUDP
 from imcpy.network.utils import get_interfaces
 
@@ -135,16 +136,13 @@ class IMCNode:
     def update_entity_id(self, ent_id, ent_label):
         self.entities[ent_label] = ent_id
 
-    def send(self, msg, log_fh=None, ignore_local=True):
+    def send_data(self, data: Message | bytes, log_fh=None, ignore_local=True):
         """
         Sends the IMC message to the node, filling in the destination
-        :param msg: The IMC message to send
+        :param msg: The data to send (bytes or message)
         :param log_fh: File handle to open IMC message log file
         :return:
         """
-
-        # Set destination of message to IMC ID of this node
-        msg.dst = self.src
 
         try:
             imcudp_services = self.services['imc+udp']
@@ -157,14 +155,14 @@ class IMCNode:
         # Note: this might not account for funky ip routing
         networks = [
             ip.IPv4Network((addr, mask), strict=False)
-            for name, addr, mask in get_interfaces(ignore_local=ignore_local, only_ipv4=True)
+            for _, addr, mask in get_interfaces(ignore_local=ignore_local, only_ipv4=True)
         ]
         for svc in imcudp_services:
             svc_ip = ip.ip_address(svc.ip)
 
             if any([svc_ip in network for network in networks]):
                 with IMCSenderUDP(svc.ip) as s:
-                    s.send(message=msg, port=svc.port, log_fh=log_fh)
+                    s.send(data, port=svc.port, log_fh=log_fh)
                 return
 
         # If this point is reached no local interfaces has the target system in its netmask
@@ -174,7 +172,19 @@ class IMCNode:
 
         with IMCSenderUDP('127.0.0.1') as s:
             for port in set(ports):
-                s.send(message=msg, port=port, log_fh=log_fh)
+                s.send(data, port=port, log_fh=log_fh)
+
+    def send(self, msg: Message, log_fh=None, ignore_local=True):
+        """
+        Sends the IMC message to the node, filling in the destination
+        :param msg: The IMC message to send
+        :param log_fh: File handle to open IMC message log file
+        :return:
+        """
+
+        # Set destination of message to IMC ID of this node and call send_data
+        msg.dst = self.src
+        self.send_data(msg, log_fh=log_fh, ignore_local=ignore_local)
 
     def __str__(self):
         return 'IMCNode(0x{:X}, {})'.format(self.src, self.sys_name)

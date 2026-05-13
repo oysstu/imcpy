@@ -4,6 +4,7 @@ import socket
 import struct
 
 import imcpy
+from imcpy import Message
 from imcpy.common import multicast_ip
 from imcpy.network.utils import get_interfaces
 
@@ -35,24 +36,28 @@ class IMCSenderUDP:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def send(self, message, port, log_fh=None):
-        if message.__module__ == '_imcpy':
-            b = imcpy.Packet.serialize(message)
-
-            if self.all_interfaces:
-                # Send one message per interface
-                interfaces = get_interfaces(ignore_local=False, only_ipv4=True)
-                for interface in interfaces:
-                    self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(interface[1]))
-                    self.sock.sendto(b, (self.dst, port))
-            else:
-                # Send on default route
-                self.sock.sendto(b, (self.dst, port))
-
-            if log_fh and not log_fh.closed:
-                log_fh.write(b)
+    def send_serialized(self, data: bytes, port: int, log_fh=None):
+        """Send serialized mesage over the socket (should be a valid serialized IMC message)."""
+        if self.all_interfaces:
+            # Send one message per interface
+            interfaces = get_interfaces(ignore_local=False, only_ipv4=True)
+            for interface in interfaces:
+                self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(interface[1]))
+                self.sock.sendto(data, (self.dst, port))
         else:
-            raise TypeError('Unknown message passed ({})'.format(type(message)))
+            # Send on default route
+            self.sock.sendto(data, (self.dst, port))
+
+        if log_fh and not log_fh.closed:
+            log_fh.write(data)
+
+    def send(self, data: Message | bytes, port, log_fh=None):
+        if data.__module__ == '_imcpy':
+            self.send_serialized(imcpy.Packet.serialize(data), port=port, log_fh=log_fh)  # type: ignore
+        elif isinstance(data, bytes):
+            self.send_serialized(data, port=port, log_fh=log_fh)
+        else:
+            raise TypeError('Unknown message passed ({})'.format(type(data)))
 
 
 class IMCProtocolUDP(asyncio.DatagramProtocol):
