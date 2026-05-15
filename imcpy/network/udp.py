@@ -52,10 +52,10 @@ class IMCSenderUDP:
             log_fh.write(data)
 
     def send(self, data: Message | bytes, port, log_fh=None):
-        if data.__module__ == '_imcpy':
-            self.send_serialized(imcpy.Packet.serialize(data), port=port, log_fh=log_fh)  # type: ignore
-        elif isinstance(data, bytes):
+        if isinstance(data, bytes):
             self.send_serialized(data, port=port, log_fh=log_fh)
+        elif hasattr(data, '__module__') and data.__module__ == '_imcpy':
+            self.send_serialized(imcpy.Packet.serialize(data), port=port, log_fh=log_fh)  # type: ignore
         else:
             raise TypeError('Unknown message passed ({})'.format(type(data)))
 
