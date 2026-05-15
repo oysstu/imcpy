@@ -23,6 +23,8 @@ class DynamicActor(IMCBase):
         super().__init__(*args, **kwargs)
 
         # Set initial entities (services generated on first announce)
+        self.entities_respond = True  # If true, respond to entity list queries
+        self.entities_query = True  # If true, query connected nodes periodically for entity lists
         self.entities = {'Daemon': 0, 'Service Announcer': 1}
 
         # IMC nodes to send heartbeat signal to (maintaining comms)
@@ -48,7 +50,7 @@ class DynamicActor(IMCBase):
         Respond to entity list queries
         """
         OpEnum = imcpy.EntityList.OperationEnum
-        if msg.op == OpEnum.QUERY:
+        if self.entities_respond and msg.op == OpEnum.QUERY:
             try:
                 node = self.resolve_node_id(msg)
 
@@ -66,11 +68,12 @@ class DynamicActor(IMCBase):
         """
         Request entity list from nodes without one
         """
-        for k, node in self._nodes.items():
-            if not node.entities:
-                q_ent = imcpy.EntityList()
-                q_ent.op = imcpy.EntityList.OperationEnum.QUERY
-                self.send(node, q_ent)
+        if self.entities_query:
+            for k, node in self._nodes.items():
+                if not node.entities:
+                    q_ent = imcpy.EntityList()
+                    q_ent.op = imcpy.EntityList.OperationEnum.QUERY
+                    self.send(node, q_ent)
 
     @Periodic(10)
     def _send_announce(self):
