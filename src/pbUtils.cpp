@@ -10,8 +10,13 @@ void bytes_to_vector(const py::bytes& b, std::vector<char>& vec){
     vec.assign(sv.begin(), sv.end());
 }
 
-py::str ascii_to_unicode_safe(const std::string &s){
+py::str ascii_to_unicode_safe(std::string_view ascii_str){
   // "replace": replaces characters with unicode question mark
-  py::str str_out(PyUnicode_DecodeASCII(s.data(), s.length(), "replace"));
-  return str_out;
+  if (PyObject *str_out = PyUnicode_DecodeASCII(ascii_str.data(), ascii_str.length(), "replace")) {
+    // Take ownership
+    return py::reinterpret_steal<py::str>(str_out);
+  } else {
+    // Decoding failed, forward exception
+    throw py::error_already_set();
+  }
 }
